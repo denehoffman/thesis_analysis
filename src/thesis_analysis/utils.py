@@ -21,9 +21,6 @@ class CCDBData:
         ],
     ):
         self.accidental_scaling_factors = accidental_scaling_factors
-        self.get_accidental_weight = np.vectorize(
-            self._get_accidental_weight, excluded=['is_mc']
-        )
 
     def get_scaling(
         self,
@@ -39,7 +36,7 @@ class CCDBData:
             return factors.microscope_factor
         return factors.hodoscope_lo_factor
 
-    def _get_accidental_weight(
+    def get_accidental_weight(
         self,
         run_number: int,
         beam_energy: float,
@@ -78,24 +75,21 @@ class RCDBData:
     ):
         self.pol_angles = pol_angles
         self.pol_magnitudes = pol_magnitudes
-        self.get_eps_xy = np.vectorize(
-            self._get_eps_xy, otypes=[float, float, float]
-        )
 
-    def _get_eps_xy(
+    def get_eps_xy(
         self,
         run_number: int,
         beam_energy: float,
-    ) -> tuple[float, float, float]:
+    ) -> tuple[float, float, bool]:
         pol_angle = self.pol_angles.get(run_number)
         if pol_angle is None:
-            return (np.nan, np.nan, 0.0)
+            return (np.nan, np.nan, False)
         run_period, pol_name, angle = pol_angle
         if angle is None:
-            return (np.nan, np.nan, 0.0)
+            return (np.nan, np.nan, False)
         pol_hist = self.pol_magnitudes[run_period][pol_name]
         energy_index = np.digitize(beam_energy, pol_hist.bins)
         if energy_index >= len(pol_hist.counts):
-            return (np.nan, np.nan, 0.0)
+            return (np.nan, np.nan, False)
         magnitude = pol_hist.counts[energy_index]
-        return magnitude * np.cos(angle), magnitude * np.sin(angle), 1.0
+        return magnitude * np.cos(angle), magnitude * np.sin(angle), True
