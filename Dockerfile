@@ -47,7 +47,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 8082
 
 WORKDIR /opt
-RUN git clone https://github.com/denehoffman/thesis_analysis
+RUN git clone https://github.com/denehoffman/thesis_analysis.git
 WORKDIR /opt/thesis_analysis
 RUN uv pip install -e .
 
