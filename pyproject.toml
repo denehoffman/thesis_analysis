@@ -1,0 +1,24 @@
+[project]
+name = "thesis_analysis"
+version = "0.1.0"
+description = "Thesis Analysis Code for N. Dene Hoffman"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "laddu",
+  "numpy",
+  "uproot",
+  "luigi",
+  "matplotlib",
+  "corner",
+  "setuptools",
+  "scp",
+  "pandas",
+  "awkward-pandas",
+]
+
+[project.scripts]
+ksks-analysis = "thesis_analysis:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
