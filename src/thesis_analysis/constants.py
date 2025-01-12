@@ -1,15 +1,16 @@
-from typing import Callable
 import luigi
 import numpy as np
 from numpy.typing import DTypeLike
+
 from thesis_analysis.root_io import RootBranch
 
 RUN_PERIODS = ['s17', 's18', 'f18', 's20']
 GLUEX_PHASE_I = ['s17', 's18', 'f18']
 GLUEX_PHASE_II = ['s20']
 DATA_TYPES = ['data', 'accmc', 'genmc', 'bkgmc']
-CHISQNDF = [3.0, 3.5, 4.0, 4.5, 5.0]
+CHISQDOF = [3.0, 3.5, 4.0, 4.5, 5.0]
 HOSTNAME = 'ernest.phys.cmu.edu'
+SPLOT_SB = [(1, 1), (1, 2), (2, 1), (2, 2)]
 
 RUN_RANGES = {
     's17': (30000, 39999),

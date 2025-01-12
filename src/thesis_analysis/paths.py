@@ -1,6 +1,7 @@
 import pickle
 from pathlib import Path
 
+from thesis_analysis.logger import logger
 from thesis_analysis.utils import CCDBData, RCDBData
 
 
@@ -21,6 +22,8 @@ class PathsSingleton:
         self.genmc = self.datasets / 'genmc'
         self.bkgmc = self.datasets / 'bkgmc'
         self.databases = self.root / 'databases'
+        self.fits = self.root / 'fits'
+        self.plots = self.root / 'plots'
         self.root.mkdir(parents=True, exist_ok=True)
         self.datasets.mkdir(parents=True, exist_ok=True)
         self.data.mkdir(parents=True, exist_ok=True)
@@ -28,6 +31,8 @@ class PathsSingleton:
         self.genmc.mkdir(parents=True, exist_ok=True)
         self.bkgmc.mkdir(parents=True, exist_ok=True)
         self.databases.mkdir(parents=True, exist_ok=True)
+        self.fits.mkdir(parents=True, exist_ok=True)
+        self.plots.mkdir(parents=True, exist_ok=True)
 
     @property
     def ccdb(self) -> CCDBData:
@@ -39,3 +44,4 @@ class PathsSingleton:
 
 
 Paths = PathsSingleton()
+logger.add(Paths.root / 'analysis.log', level=0)

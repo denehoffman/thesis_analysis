@@ -1,13 +1,9 @@
 from pathlib import Path
 
-from numpy.typing import NDArray
-from thesis_analysis.constants import get_branch
-from thesis_analysis.logger import logger
-
 import luigi
-import numpy as np
-
+from numpy.typing import NDArray
 from thesis_analysis import root_io
+from thesis_analysis.constants import get_branch
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.ccdb import CCDB
 from thesis_analysis.tasks.data import GetData
@@ -27,7 +23,7 @@ class AccidentalsAndPolarization(luigi.Task):
         return [
             luigi.LocalTarget(
                 Path(str(input_path)).parent
-                / Path('accidental_subtraction')
+                / Path('accpol')
                 / Path(str(input_path)).name
             )
         ]
@@ -36,11 +32,9 @@ class AccidentalsAndPolarization(luigi.Task):
         ccdb_data = Paths.ccdb
         rcdb_data = Paths.rcdb
         input_path = Path(self.input()[0][0].path)
-        output_path = (
-            Path(str(input_path)).parent
-            / Path('accidental_subtraction')
-            / Path(str(input_path)).name
-        )
+        output_dir = Path(str(input_path)).parent / Path('accpol')
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / Path(str(input_path)).name
         is_mc = self.data_type != 'data'
 
         branches = [
@@ -54,6 +48,7 @@ class AccidentalsAndPolarization(luigi.Task):
         ]
 
         def process(
+            _i: int,
             run_number: NDArray,
             e_beam: NDArray,
             px_beam: NDArray,
@@ -77,10 +72,9 @@ class AccidentalsAndPolarization(luigi.Task):
             weight[0] = weight[0] * new_weight
             px_beam[0] = eps_x
             py_beam[0] = eps_y
-            pz_beam[0] = e_beam[0]
+            pz_beam[0] = 0.0
             return True
 
-        logger.trace(f'Processing tree {input_path}')
         root_io.process_root_tree(
             input_path,
             output_path,
@@ -90,4 +84,3 @@ class AccidentalsAndPolarization(luigi.Task):
             rcdb_data,
             is_mc=is_mc,
         )
-        logger.trace(f'Finished processing tree {input_path} to {output_path}')

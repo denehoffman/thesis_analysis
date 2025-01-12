@@ -1,7 +1,6 @@
 import luigi
 from paramiko import SSHClient
 from scp import SCPClient
-
 from thesis_analysis.constants import global_parameters
 from thesis_analysis.logger import logger
 
@@ -9,6 +8,8 @@ from thesis_analysis.logger import logger
 class SCP(luigi.Task):
     remote_path = luigi.Parameter()
     local_path = luigi.Parameter()
+
+    resources = {'scp': 1}
 
     def run(self):
         with SSHClient() as ssh:
