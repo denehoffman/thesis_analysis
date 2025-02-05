@@ -24,6 +24,8 @@ class GuidedFit(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     averaged = luigi.BoolParameter(default=False)
 
+    resources = {'fit': 1}
+
     def requires(self):
         reqs = [
             SPlotWeights(

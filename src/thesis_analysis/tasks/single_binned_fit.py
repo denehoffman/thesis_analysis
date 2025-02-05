@@ -21,6 +21,8 @@ class SingleBinnedFit(luigi.Task):
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
 
+    resources = {'fit': 1}
+
     def requires(self):
         return [
             SPlotWeights(

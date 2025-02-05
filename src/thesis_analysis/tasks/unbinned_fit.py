@@ -24,6 +24,8 @@ class UnbinnedFit(luigi.Task):
     guided = luigi.BoolParameter(default=False)
     averaged = luigi.BoolParameter(default=False)
 
+    resources = {'fit': 1}
+
     def requires(self):
         reqs = [
             SPlotWeights(
