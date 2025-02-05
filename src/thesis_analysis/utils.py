@@ -223,6 +223,7 @@ def fit_lda(
     m.limits['lda'] = (0.0, 200.0)
     m.migrad(ncall=10_000)
     if not m.valid:
+        logger.debug(m)
         logger.error('sPlot λ fit failed!')
         raise Exception('sPlot λ fit failed!')
     return m
@@ -321,6 +322,7 @@ def run_splot_fit(
             m.fixed[f'lda{i}'] = True
     m.migrad(ncall=10_000)
     if not m.valid:
+        logger.debug(m)
         logger.error('sPlot yield fit failed!')
         raise Exception('sPlot yield fit failed!')
     yields = [m.values[f'y{i}'] for i in range(n_spec)]
@@ -480,6 +482,7 @@ def run_factorization_fits(
     h0.limits['lda_b'] = (80.0, 120.0)
     h0.migrad(ncall=10_000)
     if not h0.valid:
+        logger.debug(h0)
         logger.error('Null hypothesis fit failed!')
         raise Exception('Null hypothesis fit failed!')
 
@@ -491,6 +494,7 @@ def run_factorization_fits(
         h1.limits['lda_b'] = (80.0, 120.0)
         h1.migrad(ncall=10_000)
         if not h1.valid:
+            logger.debug(h1)
             logger.error(f'Alternative hypothesis (bin {i}) fit failed!')
             raise Exception(f'Null hypothesis (bin {i}) fit failed!')
         h1s.append(h1)
@@ -545,6 +549,7 @@ def run_factorization_fits_mc(
     h0.limits['lda'] = (5.0, 120.0)
     h0.migrad(ncall=10_000)
     if not h0.valid:
+        logger.debug(h0)
         logger.error('Null hypothesis fit failed!')
         raise Exception('Null hypothesis fit failed!')
 
@@ -554,6 +559,7 @@ def run_factorization_fits_mc(
         h1.limits['lda'] = (5.0, 120.0)
         h1.migrad(ncall=10_000)
         if not h1.valid:
+            logger.debug(h1)
             logger.error(f'Alternative hypothesis (bin {i}) fit failed!')
             raise Exception(f'Null hypothesis (bin {i}) fit failed!')
         h1s.append(h1)
