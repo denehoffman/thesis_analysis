@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export SSH_AUTH_SOCK=/ssh-agent
-ssh-keyscan -H $GLUEX_HOSTNAME >> /root/.ssh/known_hosts
+ssh-keyscan -H $GLUEX_HOSTNAME >>/root/.ssh/known_hosts
 
 uv pip install -e .
 

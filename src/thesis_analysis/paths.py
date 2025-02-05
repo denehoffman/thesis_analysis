@@ -23,6 +23,7 @@ class PathsSingleton:
         self.bkgmc = self.datasets / 'bkgmc'
         self.databases = self.root / 'databases'
         self.fits = self.root / 'fits'
+        self.reports = self.root / 'reports'
         self.plots = self.root / 'plots'
         self.root.mkdir(parents=True, exist_ok=True)
         self.datasets.mkdir(parents=True, exist_ok=True)
@@ -32,6 +33,7 @@ class PathsSingleton:
         self.bkgmc.mkdir(parents=True, exist_ok=True)
         self.databases.mkdir(parents=True, exist_ok=True)
         self.fits.mkdir(parents=True, exist_ok=True)
+        self.reports.mkdir(parents=True, exist_ok=True)
         self.plots.mkdir(parents=True, exist_ok=True)
 
     @property

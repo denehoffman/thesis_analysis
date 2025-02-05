@@ -2,6 +2,7 @@ import pickle
 import sqlite3
 
 import luigi
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.databases import GetDatabases
 from thesis_analysis.utils import CCDBData, ScalingFactors

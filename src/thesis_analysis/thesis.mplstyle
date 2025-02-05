@@ -34,6 +34,7 @@ figure.autolayout: True
 # full width in pdf = 469.75502pt = 6.5in, 6.5/golden_ratio = 4.0
 # 80% -> 5.2 x 3.2
 # half width -> 3.25 x 2.0
+# double height -> 5.2 x 6.4
 figure.figsize: 5.2, 3.2
 # Images
 image.cmap: viridis

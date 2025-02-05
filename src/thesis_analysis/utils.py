@@ -1,10 +1,11 @@
+import itertools
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
 
-import laddu as ld
 import numpy as np
 from iminuit import Minuit
+from scipy.stats import chi2
 
 from thesis_analysis.logger import logger
 
@@ -103,19 +104,39 @@ class RCDBData:
 
 @dataclass
 class FitResult:
+    n2ll: float
+    n_parameters: int
+    n_events: int
     values: dict[str, float]
     errors: dict[str, float]
 
     @staticmethod
-    def from_minuit(minuit: Minuit) -> 'FitResult':
-        return FitResult(minuit.values.to_dict(), minuit.errors.to_dict())
+    def from_minuit(minuit: Minuit, n_events: int) -> 'FitResult':
+        assert minuit.fval is not None
+        return FitResult(
+            minuit.fval,
+            minuit.nfit,
+            n_events,
+            minuit.values.to_dict(),
+            minuit.errors.to_dict(),
+        )
+
+    @property
+    def aic(self) -> float:
+        return 2.0 * self.n_parameters + self.n2ll  # 2k + -2ln(L)
+
+    @property
+    def bic(self) -> float:
+        return (
+            self.n_parameters * np.log(self.n_events) + self.n2ll
+        )  # kln(n) + -2ln(L)
 
 
 @dataclass
 class SPlotFitResult:
     lda_fits_sig: list[FitResult]
     lda_fits_bkg: list[FitResult]
-    yield_fit: FitResult
+    total_fit: FitResult
     v: np.ndarray
 
     def save(self, path: Path | str):
@@ -125,51 +146,57 @@ class SPlotFitResult:
     @staticmethod
     def load(path: Path | str) -> 'SPlotFitResult':
         path = Path(path)
-        return pickle.load(path.open('wb'))
+        return pickle.load(path.open('rb'))
+
+    @property
+    def aic(self) -> float:
+        return self.total_fit.aic
+
+    @property
+    def bic(self) -> float:
+        return self.total_fit.bic
 
     @property
     def ldas(self) -> list[float]:
-        return [fit.values['lda'] for fit in self.lda_fits_sig] + [
-            fit.values['lda'] for fit in self.lda_fits_bkg
-        ]
+        return self.ldas_sig + self.ldas_bkg
 
     @property
     def ldas_sig(self) -> list[float]:
-        return [fit.values['lda'] for fit in self.lda_fits_sig]
+        return [self.total_fit.values[f'lda{i}'] for i in range(self.nsig)]
 
     @property
     def ldas_bkg(self) -> list[float]:
-        return [fit.values['lda'] for fit in self.lda_fits_bkg]
+        return [
+            self.total_fit.values[f'lda{i + self.nsig}']
+            for i in range(self.nbkg)
+        ]
 
     @property
-    def n_sig(self) -> int:
+    def nsig(self) -> int:
         return len(self.lda_fits_sig)
 
     @property
-    def n_bkg(self) -> int:
+    def nbkg(self) -> int:
         return len(self.lda_fits_bkg)
 
     @property
     def yields(self) -> list[float]:
-        return [
-            self.yield_fit.values[f'y{i}']
-            for i in range(self.n_sig + self.n_bkg)
-        ]
+        return self.yields_sig + self.yields_bkg
 
     @property
     def yields_sig(self) -> list[float]:
-        return [self.yield_fit.values[f'y{i}'] for i in range(self.n_sig)]
+        return [self.total_fit.values[f'y{i}'] for i in range(self.nsig)]
 
     @property
     def yields_bkg(self) -> list[float]:
         return [
-            self.yield_fit.values[f'y{i+self.n_sig}'] for i in range(self.n_bkg)
+            self.total_fit.values[f'y{i+self.nsig}'] for i in range(self.nbkg)
         ]
 
     def pdfs(self, rfl1: np.ndarray, rfl2: np.ndarray) -> list[np.ndarray]:
         return [
             exp_pdf(rfl1, rfl2, self.ldas[i])
-            for i in range(self.n_sig + self.n_bkg)
+            for i in range(self.nsig + self.nbkg)
         ]
 
 
@@ -204,17 +231,17 @@ def fit_lda(
 def fit_components(
     rfl1: np.ndarray,
     rfl2: np.ndarray,
-    mass: np.ndarray,
+    control: np.ndarray,
     weight: np.ndarray,
     *,
     n_spec: int,
 ) -> tuple[list[float], list[Minuit]]:
     tot_nevents = np.sum(weight)
-    mass_bins = np.quantile(mass, np.linspace(0, 1, n_spec + 1))
+    mass_bins = np.quantile(control, np.linspace(0, 1, n_spec + 1))
     binned_nevents = []
     fits = []
-    for m_lo, m_hi in zip(mass_bins[:-1], mass_bins[1:]):
-        mask = (m_lo <= mass) & (mass < m_hi)
+    for c_lo, c_hi in zip(mass_bins[:-1], mass_bins[1:]):
+        mask = (c_lo <= control) & (control < c_hi)
         nevents = np.sum(weight[mask])
         binned_nevents.append(nevents)
         fit = fit_lda(rfl1[mask], rfl2[mask], weight[mask], lda0=100.0)
@@ -223,28 +250,30 @@ def fit_components(
     return fit_fractions, fits
 
 
-def get_sweights(
+def run_splot_fit(
     rfl1: np.ndarray,
     rfl2: np.ndarray,
     weight: np.ndarray,
     rfl1_sigmc: np.ndarray,
     rfl2_sigmc: np.ndarray,
-    mass_sigmc: np.ndarray,
+    control_sigmc: np.ndarray,
     weight_sigmc: np.ndarray,
     rfl1_bkgmc: np.ndarray,
     rfl2_bkgmc: np.ndarray,
-    mass_bkgmc: np.ndarray,
+    control_bkgmc: np.ndarray,
     weight_bkgmc: np.ndarray,
     *,
-    n_sig: int,
-    n_bkg: int,
-) -> tuple[SPlotFitResult, np.ndarray]:
-    n_spec = n_sig + n_bkg
+    nsig: int,
+    nbkg: int,
+    fixed_sig: bool,
+    fixed_bkg: bool,
+) -> SPlotFitResult:
+    n_spec = nsig + nbkg
     fit_fractions_sig, fits_sig = fit_components(
-        rfl1_sigmc, rfl2_sigmc, mass_sigmc, weight_sigmc, n_spec=n_sig
+        rfl1_sigmc, rfl2_sigmc, control_sigmc, weight_sigmc, n_spec=nsig
     )
     fit_fractions_bkg, fits_bkg = fit_components(
-        rfl1_bkgmc, rfl2_bkgmc, mass_bkgmc, weight_bkgmc, n_spec=n_bkg
+        rfl1_bkgmc, rfl2_bkgmc, control_bkgmc, weight_bkgmc, n_spec=nbkg
     )
     nevents = np.sum(weight)
     # assume half the data is signal-like to initialize the fit
@@ -259,28 +288,46 @@ def get_sweights(
     logger.debug(f'λs init: {ldas0}')
 
     def nll(*args: float) -> float:
+        yields = args[::2]
+        ldas = args[1::2]
         likelihoods = weight * np.log(
             np.sum(
                 [
-                    args[i] * exp_pdf(rfl1, rfl2, ldas0[i])
+                    yields[i] * exp_pdf(rfl1, rfl2, ldas[i])
                     for i in range(n_spec)
                 ],
                 axis=0,
             )
             + np.finfo(float).tiny
         )
-        return -2 * (np.sum(np.sort(likelihoods)) - np.sum(args))
+        return -2 * (np.sum(np.sort(likelihoods)) - np.sum(yields))
 
-    m = Minuit(nll, *yields0, name=[f'y{i}' for i in range(n_spec)])
+    p0 = list(itertools.chain(*zip(yields0, ldas0)))
+    name = list(
+        itertools.chain(
+            *zip(
+                [f'y{i}' for i in range(n_spec)],
+                [f'lda{i}' for i in range(n_spec)],
+            )
+        )
+    )
+    m = Minuit(nll, *p0, name=name)
     for i in range(n_spec):
         m.limits[f'y{i}'] = (0.0, None)
+        m.limits[f'lda{i}'] = (max(ldas0[i] - 30, 0.01), ldas0[i] + 30)
+        if fixed_sig and i < nsig:
+            m.fixed[f'lda{i}'] = True
+        if fixed_bkg and i >= nsig:
+            m.fixed[f'lda{i}'] = True
     m.migrad(ncall=10_000)
     if not m.valid:
         logger.error('sPlot yield fit failed!')
         raise Exception('sPlot yield fit failed!')
     yields = [m.values[f'y{i}'] for i in range(n_spec)]
+    ldas = [m.values[f'lda{i}'] for i in range(n_spec)]
     logger.debug(f'Yields (fit): {yields}')
-    pdfs = [exp_pdf(rfl1, rfl2, ldas0[i]) for i in range(n_spec)]
+    logger.debug(f'λs (fit): {ldas}')
+    pdfs = [exp_pdf(rfl1, rfl2, ldas[i]) for i in range(n_spec)]
     denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
     inds = np.argwhere(
         np.power(denom, 2) == 0.0
@@ -300,273 +347,222 @@ def get_sweights(
     v = np.linalg.inv(v_inv)
     logger.debug(f'V = {v.tolist()}')
     fit_result = SPlotFitResult(
-        [FitResult.from_minuit(fit_sig) for fit_sig in fits_sig],
-        [FitResult.from_minuit(fit_bkg) for fit_bkg in fits_bkg],
-        FitResult.from_minuit(m),
+        [
+            FitResult.from_minuit(fit_sig, len(rfl1_sigmc))
+            for fit_sig in fits_sig
+        ],
+        [
+            FitResult.from_minuit(fit_bkg, len(rfl1_bkgmc))
+            for fit_bkg in fits_bkg
+        ],
+        FitResult.from_minuit(m, len(rfl1)),
         v,
     )
+    return fit_result
+
+
+def get_sweights(
+    fit_result: SPlotFitResult,
+    rfl1: np.ndarray,
+    rfl2: np.ndarray,
+    weight: np.ndarray,
+    *,
+    nsig: int,
+    nbkg: int,
+) -> np.ndarray:
+    n_spec = nsig + nbkg
+    yields = fit_result.yields
+    pdfs = fit_result.pdfs(rfl1, rfl2)
+    denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
+    inds = np.argwhere(
+        np.power(denom, 2) == 0.0
+    )  # if a component is very small, this can happen
+    denom[inds] += np.sqrt(
+        np.finfo(float).eps
+    )  # push these values just lightly away from zero
+    v = fit_result.v
+    logger.debug(f'V = {v.tolist()}')
     sweights = [
         np.sum([weight * v[i, j] * pdfs[j] for j in range(n_spec)], axis=0)
         / denom
         for i in range(n_spec)
     ]
-    return fit_result, np.sum(sweights[:n_sig], axis=0)
+    return np.sum(sweights[:nsig], axis=0)
 
 
 @dataclass
-class UnbinnedFitResult:
-    status: ld.Status
-    masses_data: np.ndarray
-    weights_data: np.ndarray
-    masses_accmc: np.ndarray
-    weights_fit: np.ndarray
-    weights_s0p: np.ndarray
-    weights_s0n: np.ndarray
-    weights_d2p: np.ndarray
+class Significance:
+    likelihood_ratio: float
+    ndof: float
 
-    def get_data_hist(self, bins: int, range: tuple[float, float]) -> Histogram:
-        counts, edges = np.histogram(
-            self.masses_data, weights=self.weights_data, bins=bins, range=range
+    @property
+    def p(self) -> float:
+        return float(chi2(self.ndof).sf(self.likelihood_ratio))
+
+
+@dataclass
+class FactorizationFitResult:
+    h0: FitResult
+    h1s: list[FitResult]
+    ndof: int
+
+    @property
+    def significance(self):
+        r = self.h0.n2ll - sum([h1.n2ll for h1 in self.h1s])
+        return Significance(r, self.ndof)
+
+
+def get_quantile_edges(variable: np.ndarray, *, bins: int) -> np.ndarray:
+    return np.quantile(variable, np.linspace(0, 1, bins + 1))
+
+
+def get_quantile_indices(
+    variable: np.ndarray, *, bins: int
+) -> list[np.ndarray]:
+    quantiles = get_quantile_edges(variable, bins=bins)
+    quantiles[-1] = (
+        np.inf
+    )  # ensure the maximum value gets placed in the last bin
+    quantile_assignment = np.digitize(variable, quantiles)
+    return [np.where(quantile_assignment == i)[0] for i in range(1, bins + 1)]
+
+
+def run_factorization_fits(
+    rfl1: np.ndarray,
+    rfl2: np.ndarray,
+    weight: np.ndarray,
+    control: np.ndarray,
+    *,
+    bins: int,
+) -> FactorizationFitResult:
+    quantile_indices = get_quantile_indices(control, bins=bins)
+
+    def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
+        def nll(z: float, lda_s: float, lda_b: float) -> float:
+            likelihoods = weights * np.log(
+                z * exp_pdf(rfl1s, rfl2s, lda_s)
+                + (1 - z) * exp_pdf(rfl1s, rfl2s, lda_b)
+                + np.finfo(float).tiny
+            )
+            return float(
+                -2.0 * np.sum(np.sort(likelihoods))
+            )  # the integral term doesn't matter here since we are using this in a ratio where it cancels
+
+        return nll
+
+    nlls = [
+        generate_nll(
+            rfl1[quantile_indices[i]],
+            rfl2[quantile_indices[i]],
+            weight[quantile_indices[i]],
         )
-        return Histogram(counts, edges)
+        for i in range(bins)
+    ]
 
-    def get_fit_hist(self, bins: int, range: tuple[float, float]) -> Histogram:
-        counts, edges = np.histogram(
-            self.masses_accmc, weights=self.weights_fit, bins=bins, range=range
-        )
-        return Histogram(counts, edges)
-
-    def get_s0p_hist(self, bins: int, range: tuple[float, float]) -> Histogram:
-        counts, edges = np.histogram(
-            self.masses_accmc, weights=self.weights_s0p, bins=bins, range=range
-        )
-        return Histogram(counts, edges)
-
-    def get_s0n_hist(self, bins: int, range: tuple[float, float]) -> Histogram:
-        counts, edges = np.histogram(
-            self.masses_accmc, weights=self.weights_s0n, bins=bins, range=range
-        )
-        return Histogram(counts, edges)
-
-    def get_d2p_hist(self, bins: int, range: tuple[float, float]) -> Histogram:
-        counts, edges = np.histogram(
-            self.masses_accmc, weights=self.weights_d2p, bins=bins, range=range
-        )
-        return Histogram(counts, edges)
-
-
-def fit_unbinned(
-    data_s17_path: str | Path,
-    accmc_s17_path: str | Path,
-    data_s18_path: str | Path,
-    accmc_s18_path: str | Path,
-    data_f18_path: str | Path,
-    accmc_f18_path: str | Path,
-    data_s20_path: str | Path,
-    accmc_s20_path: str | Path,
-) -> UnbinnedFitResult:
-    data_ds_S17 = ld.open_amptools(str(data_s17_path), pol_in_beam=True)
-    logger.info('S17 data loaded')
-    accmc_ds_S17 = ld.open_amptools(str(accmc_s17_path), pol_in_beam=True)
-    logger.info('S17 accmc loaded')
-    data_ds_S18 = ld.open_amptools(str(data_s18_path), pol_in_beam=True)
-    logger.info('S18 data loaded')
-    accmc_ds_S18 = ld.open_amptools(str(accmc_s18_path), pol_in_beam=True)
-    logger.info('S18 accmc loaded')
-    data_ds_F18 = ld.open_amptools(str(data_f18_path), pol_in_beam=True)
-    logger.info('F18 data loaded')
-    accmc_ds_F18 = ld.open_amptools(str(accmc_f18_path), pol_in_beam=True)
-    logger.info('F18 accmc loaded')
-    data_ds_S20 = ld.open_amptools(str(data_s20_path), pol_in_beam=True)
-    logger.info('S20 data loaded')
-    accmc_ds_S20 = ld.open_amptools(str(accmc_s20_path), pol_in_beam=True)
-    logger.info('S20 accmc loaded')
-
-    def single_dataset_nll(ds_data: ld.Dataset, ds_mc: ld.Dataset) -> ld.NLL:
-        res_mass = ld.Mass([2, 3])
-        angles = ld.Angles(0, [1], [2], [2, 3])
-        polarization = ld.Polarization(0, [1])
-        manager = ld.Manager()
-        z00p = manager.register(ld.Zlm('z00p', 0, 0, '+', angles, polarization))
-        z00n = manager.register(ld.Zlm('z00n', 0, 0, '-', angles, polarization))
-        z22p = manager.register(ld.Zlm('z22p', 2, 2, '+', angles, polarization))
-        f0p = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixF0(
-                'f0p',
-                (
-                    (ld.constant(0), ld.constant(0)),
-                    (ld.parameter('f0(980) re +'), ld.constant(0)),
-                    (
-                        ld.parameter('f0(1370) re +'),
-                        ld.parameter('f0(1370) im +'),
-                    ),
-                    (
-                        ld.parameter('f0(1500) re +'),
-                        ld.parameter('f0(1500) im +'),
-                    ),
-                    (
-                        ld.parameter('f0(1710) re +'),
-                        ld.parameter('f0(1710) im +'),
-                    ),
-                ),
-                2,
-                res_mass,
+    # arguments are (z_0, z_1, ..., z_{n-1}, lda_s, lda_b)
+    def nll0(*args: float) -> float:
+        return np.sum(
+            np.array(
+                [nlls[i](args[i], args[-2], args[-1]) for i in range(bins)]
             )
         )
-        f0n = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixF0(
-                'f0n',
-                (
-                    (ld.constant(0), ld.constant(0)),
-                    (ld.parameter('f0(980) re -'), ld.constant(0)),
-                    (
-                        ld.parameter('f0(1370) re -'),
-                        ld.parameter('f0(1370) im -'),
-                    ),
-                    (
-                        ld.parameter('f0(1500) re -'),
-                        ld.parameter('f0(1500) im -'),
-                    ),
-                    (
-                        ld.parameter('f0(1710) re -'),
-                        ld.parameter('f0(1710) im -'),
-                    ),
-                ),
-                2,
-                res_mass,
-            )
-        )
-        f2 = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixF2(
-                'f2',
-                (
-                    (ld.parameter('f2(1270) re'), ld.parameter('f2(1270)')),
-                    (ld.parameter('f2(1525) re'), ld.parameter('f2(1525) im')),
-                    (ld.parameter('f2(1810) re'), ld.parameter('f2(1810) im')),
-                    (ld.parameter('f2(1950) re'), ld.parameter('f2(1950) im')),
-                ),
-                2,
-                res_mass,
-            )
-        )
-        a0p = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixA0(
-                'a0p',
-                (
-                    (ld.parameter('a0(980) re +'), ld.parameter('a0(980) +')),
-                    (
-                        ld.parameter('a0(1450) re +'),
-                        ld.parameter('a0(1450) im +'),
-                    ),
-                ),
-                1,
-                res_mass,
-            )
-        )
-        a0n = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixA0(
-                'a0n',
-                (
-                    (ld.parameter('a0(980) re -'), ld.parameter('a0(980) -')),
-                    (
-                        ld.parameter('a0(1450) re -'),
-                        ld.parameter('a0(1450) im -'),
-                    ),
-                ),
-                1,
-                res_mass,
-            )
-        )
-        a2 = manager.register(
-            ld.amplitudes.kmatrix.KopfKMatrixA2(
-                'a2',
-                (
-                    (ld.parameter('a2(1320) re'), ld.parameter('a2(1320)')),
-                    (ld.parameter('a2(1700) re'), ld.parameter('a2(1700) im')),
-                ),
-                1,
-                res_mass,
-            )
-        )
-        pos_re = (
-            z00p.real() * (f0p + a0p) + z22p.real() * (f2 + a2)
-        ).norm_sqr()
-        pos_im = (
-            z00p.imag() * (f0p + a0p) + z22p.imag() * (f2 + a2)
-        ).norm_sqr()
-        neg_re = (z00n.real() * (f0n + a0n)).norm_sqr()
-        neg_im = (z00n.imag() * (f0n + a0n)).norm_sqr()
-        model = manager.model(pos_re + pos_im + neg_re + neg_im)
 
-        return ld.NLL(model, ds_data, ds_mc)
-
-    manager = ld.LikelihoodManager()
-    nll_S17 = single_dataset_nll(data_ds_S17, accmc_ds_S17)
-    logger.info('Evaluating S17 NLL...')
-    logger.info(f'Result: {nll_S17.evaluate([1.0] * len(nll_S17.parameters))}')
-    nll_S18 = single_dataset_nll(data_ds_S18, accmc_ds_S18)
-    logger.info('Evaluating S18 NLL...')
-    logger.info(f'Result: {nll_S18.evaluate([1.0] * len(nll_S18.parameters))}')
-    nll_F18 = single_dataset_nll(data_ds_F18, accmc_ds_F18)
-    logger.info('Evaluating F18 NLL...')
-    logger.info(f'Result: {nll_F18.evaluate([1.0] * len(nll_F18.parameters))}')
-    nll_S20 = single_dataset_nll(data_ds_S20, accmc_ds_S20)
-    logger.info('Evaluating S20 NLL...')
-    logger.info(f'Result: {nll_S20.evaluate([1.0] * len(nll_S20.parameters))}')
-    s17 = manager.register(nll_S17.as_term())
-    s18 = manager.register(nll_S18.as_term())
-    f18 = manager.register(nll_F18.as_term())
-    s20 = manager.register(nll_S20.as_term())
-    model = s17 + s18 + f18 + s20
-    nll = manager.load(model)
-    logger.info('Model loaded')
-
-    class LoggingObserver(ld.Observer):
-        def callback(
-            self, step: int, status: ld.Status
-        ) -> tuple[ld.Status, bool]:
-            logger.info(f'Step {step}:\n{status}')
-            return status, False
-
-    logger.info('Computing one NLL evaluation...')
-    logger.info(
-        f'First evaluation: {nll.evaluate([1.0] * len(nll.parameters))}'
+    h0 = Minuit(
+        nll0,
+        *[0.5] * bins,
+        12.0,
+        100.0,
+        name=[f'z{i}' for i in range(bins)] + ['lda_s', 'lda_b'],
     )
-    status = nll.minimize(
-        [1.0] * len(nll.parameters),
-        observers=[LoggingObserver()],
-    )
-    weights_fit = np.array([])
-    weights_s0p = np.array([])
-    weights_s0n = np.array([])
-    weights_d2p = np.array([])
-    nlls = [nll_S17, nll_S18, nll_F18, nll_S20]
-    for nll in nlls:
-        nll.activate_all()
-        weights_fit = np.append(weights_fit, nll.project(status.x))
-        nll.isolate(['z00p', 'f0p', 'a0p'])
-        weights_s0p = np.append(weights_s0p, nll.project(status.x))
-        nll.isolate(['z00n', 'f0n', 'a0n'])
-        weights_s0n = np.append(weights_s0n, nll.project(status.x))
-        nll.isolate(['z22p', 'f2', 'a2'])
-        weights_d2p = np.append(weights_d2p, nll.project(status.x))
-        nll.activate_all()
+    for i in range(bins):
+        h0.limits[f'z{i}'] = (0.0, None)
+    h0.limits['lda_s'] = (5.0, 20.0)
+    h0.limits['lda_b'] = (80.0, 120.0)
+    h0.migrad(ncall=10_000)
+    if not h0.valid:
+        logger.error('Null hypothesis fit failed!')
+        raise Exception('Null hypothesis fit failed!')
 
-    res_mass = ld.Mass([2, 3])
-    masses_accmc = np.concatenate(
-        [np.array(res_mass.value_on(nll.accmc)) for nll in nlls]
+    h1s = []
+    for i in range(bins):
+        h1 = Minuit(nlls[i], z=0.5, lda_s=12.0, lda_b=100.0)  # type: ignore
+        h1.limits['z'] = (0.0, None)
+        h1.limits['lda_s'] = (5.0, 20.0)
+        h1.limits['lda_b'] = (80.0, 120.0)
+        h1.migrad(ncall=10_000)
+        if not h1.valid:
+            logger.error(f'Alternative hypothesis (bin {i}) fit failed!')
+            raise Exception(f'Null hypothesis (bin {i}) fit failed!')
+        h1s.append(h1)
+
+    return FactorizationFitResult(
+        FitResult.from_minuit(h0, len(rfl1)),
+        [
+            FitResult.from_minuit(h1s[i], len(quantile_indices[i]))
+            for i in range(bins)
+        ],
+        2 * bins - 2,
     )
-    masses_data = np.concatenate(
-        [np.array(res_mass.value_on(nll.data)) for nll in nlls]
-    )
-    weights_data = np.concatenate([nll.data.weights for nll in nlls])
-    return UnbinnedFitResult(
-        status,
-        masses_data,
-        weights_data,
-        masses_accmc,
-        weights_fit,
-        weights_s0p,
-        weights_s0n,
-        weights_d2p,
+
+
+def get_factorization_fits_mc(
+    rfl1: np.ndarray,
+    rfl2: np.ndarray,
+    weight: np.ndarray,
+    control: np.ndarray,
+    *,
+    bins: int,
+) -> FactorizationFitResult:
+    quantile_indices = get_quantile_indices(control, bins=bins)
+
+    def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
+        def nll(lda: float) -> float:
+            return float(
+                -2.0
+                * np.sum(
+                    np.sort(
+                        weights * np.log(exp_pdf(rfl1s, rfl2s, lda))
+                        + np.finfo(float).tiny
+                    )
+                )
+            )  # the integral term doesn't matter here since we are using this in a ratio where it cancels
+
+        return nll
+
+    nlls = [
+        generate_nll(
+            rfl1[quantile_indices[i]],
+            rfl2[quantile_indices[i]],
+            weight[quantile_indices[i]],
+        )
+        for i in range(bins)
+    ]
+
+    def nll0(lda: float) -> float:
+        return np.sum(np.array([nlls[i](lda) for i in range(bins)]))
+
+    h0 = Minuit(nll0, lda=50.0)  # type: ignore
+    h0.limits['lda'] = (5.0, 120.0)
+    h0.migrad(ncall=10_000)
+    if not h0.valid:
+        logger.error('Null hypothesis fit failed!')
+        raise Exception('Null hypothesis fit failed!')
+
+    h1s = []
+    for i in range(bins):
+        h1 = Minuit(nlls[i], lda=50.0)  # type: ignore
+        h1.limits['lda'] = (5.0, 120.0)
+        h1.migrad(ncall=10_000)
+        if not h1.valid:
+            logger.error(f'Alternative hypothesis (bin {i}) fit failed!')
+            raise Exception(f'Null hypothesis (bin {i}) fit failed!')
+        h1s.append(h1)
+
+    return FactorizationFitResult(
+        FitResult.from_minuit(h0, len(rfl1)),
+        [
+            FitResult.from_minuit(h1s[i], len(quantile_indices[i]))
+            for i in range(bins)
+        ],
+        bins - 1,
     )

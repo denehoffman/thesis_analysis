@@ -19,24 +19,30 @@ class PlotMass(luigi.Task):
     bins = luigi.IntParameter()
     original = luigi.BoolParameter(False)
     chisqdof = luigi.OptionalFloatParameter(None)
-    n_sig = luigi.OptionalIntParameter(None)
-    n_bkg = luigi.OptionalIntParameter(None)
+    splot_method = luigi.OptionalParameter(None)
+    nsig = luigi.OptionalIntParameter(None)
+    nbkg = luigi.OptionalIntParameter(None)
 
     def requires(self):
         if self.original:
             return [GetData(self.data_type, self.run_period)]
         elif self.chisqdof is None:
             return [AccidentalsAndPolarization(self.data_type, self.run_period)]
-        elif self.n_sig is None and self.n_bkg is None:
+        elif self.nsig is None and self.nbkg is None:
             return [ChiSqDOF(self.data_type, self.run_period, self.chisqdof)]
-        elif self.n_sig is not None and self.n_bkg is not None:
+        elif (
+            self.splot_method is not None
+            and self.nsig is not None
+            and self.nbkg is not None
+        ):
             return [
                 SPlot(
                     self.data_type,
                     self.run_period,
                     self.chisqdof,
-                    self.n_sig,
-                    self.n_bkg,
+                    self.splot_method,
+                    self.nsig,
+                    self.nbkg,
                 )
             ]
         else:
@@ -56,18 +62,22 @@ class PlotMass(luigi.Task):
                     path / f'mass_{self.data_type}_{self.run_period}_accpol.png'
                 )
             ]
-        elif self.n_sig is None and self.n_bkg is None:
+        elif self.nsig is None and self.nbkg is None:
             return [
                 luigi.LocalTarget(
                     path
                     / f'mass_{self.data_type}_{self.run_period}_accpol_chisqdof_{self.chisqdof:.1f}.png'
                 )
             ]
-        elif self.n_sig is not None and self.n_bkg is not None:
+        elif (
+            self.splot_method is not None
+            and self.nsig is not None
+            and self.nbkg is not None
+        ):
             return [
                 luigi.LocalTarget(
                     path
-                    / f'mass_{self.data_type}_{self.run_period}_accpol_chisqdof_{self.chisqdof:.1f}_splot_{self.n_sig}s_{self.n_bkg}b.png'
+                    / f'mass_{self.data_type}_{self.run_period}_accpol_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
                 )
             ]
         else:
@@ -89,12 +99,12 @@ class PlotMass(luigi.Task):
         ax.hist(
             data['M_Resonance'],
             weights=data['Weight'],
-            bins=self.bins,
+            bins=int(self.bins),  # type: ignore
             range=(1.0, 2.0),
             color=colors.blue,
         )
         ax.set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        bin_width_mev = int(1000 / self.bins)
+        bin_width_mev = int(1000 / int(self.bins))  # type: ignore
         ax.set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
         fig.savefig(output_path)
         plt.close()

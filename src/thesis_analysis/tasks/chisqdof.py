@@ -2,6 +2,7 @@ from pathlib import Path
 
 import luigi
 from numpy.typing import NDArray
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.tasks.accid_and_pol import AccidentalsAndPolarization
@@ -20,18 +21,14 @@ class ChiSqDOF(luigi.Task):
         return [
             luigi.LocalTarget(
                 Path(str(input_path)).parent
-                / Path(f'chisqdof_{self.chisqdof:.1f}')
-                / Path(str(input_path)).name
+                / f'{input_path.stem}_chisqdof_{self.chisqdof:.1f}.root'
             )
         ]
 
     def run(self):
         input_path = Path(self.input()[0][0].path)
-        output_dir = Path(str(input_path)).parent / Path(
-            f'chisqdof_{self.chisqdof:.1f}'
-        )
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / Path(str(input_path)).name
+        output_path = Path(self.output()[0].path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         branches = [
             get_branch('ChiSqDOF'),

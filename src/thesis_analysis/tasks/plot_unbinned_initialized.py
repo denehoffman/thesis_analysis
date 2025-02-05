@@ -4,76 +4,80 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+
 from thesis_analysis import colors
-from thesis_analysis.constants import RUN_PERIODS
+from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
 from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.splot import SPlot
-from thesis_analysis.utils import fit_unbinned
+from thesis_analysis.pwa import UnbinnedFitResult, Waveset
+from thesis_analysis.tasks.fit_unbinned_initialized import (
+    FitUnbinnedInitialized,
+)
 
 
-class FitUnbinned(luigi.Task):
+class PlotUnbinnedInitialized(luigi.Task):
     chisqdof = luigi.FloatParameter()
-    n_sig = luigi.IntParameter()
-    n_bkg = luigi.IntParameter()
-
-    resources = {'exclusive_task': 1}
+    splot_method = luigi.Parameter()
+    nsig = luigi.IntParameter()
+    nbkg = luigi.IntParameter()
 
     def requires(self):
         return [
-            SPlot('data', rp, self.chisqdof, self.n_sig, self.n_bkg)
-            for rp in RUN_PERIODS
-        ] + [
-            SPlot('accmc', rp, self.chisqdof, self.n_sig, self.n_bkg)
-            for rp in RUN_PERIODS
+            FitUnbinnedInitialized(
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+            ),
         ]
 
     def output(self):
         return [
             luigi.LocalTarget(
-                Paths.fits
-                / Path(f'chisqdof_{self.chisqdof:.1f}')
-                / Path(f'splot_{self.n_sig}s_{self.n_bkg}b')
-                / 'unbinned_fit.pkl'
-            ),
-            luigi.LocalTarget(
                 Paths.plots
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.n_sig}s_{self.n_bkg}b.png'
+                / f'unbinned_fit_initialized_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
             ),
         ]
 
     def run(self):
-        data_s17_path = self.input()[0][0]
-        data_s18_path = self.input()[1][0]
-        data_f18_path = self.input()[2][0]
-        data_s20_path = self.input()[3][0]
-        accmc_s17_path = self.input()[4][0]
-        accmc_s18_path = self.input()[5][0]
-        accmc_f18_path = self.input()[6][0]
-        accmc_s20_path = self.input()[7][0]
+        unbinned_fit_path = Path(str(self.input()[0][0]))
 
-        output_fit_path = Path(self.output()[0].path)
-        output_fit_path.parent.mkdir(parents=True, exist_ok=True)
-        output_plot_path = Path(self.output()[1].path)
+        output_plot_path = Path(str(self.output()[0].path))
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
 
-        fit_result = fit_unbinned(
-            data_s17_path,
-            accmc_s17_path,
-            data_s18_path,
-            accmc_s18_path,
-            data_f18_path,
-            accmc_f18_path,
-            data_s20_path,
-            accmc_s20_path,
+        fit_result: UnbinnedFitResult = pickle.load(
+            unbinned_fit_path.open('rb')
         )
-        pickle.dump(fit_result, output_fit_path.open('wb'))
+
+        datasets = fit_result.get_datasets()
+        nlls = fit_result.get_nlls(datasets)
+        weights_fit = fit_result.project(nlls, threads=NUM_THREADS)
+        weights_s0p = fit_result.project_with(
+            Waveset.S0P, nlls, threads=NUM_THREADS
+        )
+        weights_s0n = fit_result.project_with(
+            Waveset.S0N, nlls, threads=NUM_THREADS
+        )
+        weights_d2p = fit_result.project_with(
+            Waveset.D2P, nlls, threads=NUM_THREADS
+        )
+
+        data_hist = fit_result.get_hist(
+            datasets[0], bins=NBINS, range=RANGE, weights=None
+        )
+        fit_hist = fit_result.get_hist(
+            datasets[1], bins=NBINS, range=RANGE, weights=weights_fit
+        )
+        s0p_hist = fit_result.get_hist(
+            datasets[1], bins=NBINS, range=RANGE, weights=weights_s0p
+        )
+        s0n_hist = fit_result.get_hist(
+            datasets[1], bins=NBINS, range=RANGE, weights=weights_s0n
+        )
+        d2p_hist = fit_result.get_hist(
+            datasets[1], bins=NBINS, range=RANGE, weights=weights_d2p
+        )
 
         mpl_style.use('thesis_analysis.thesis')
-        data_hist = fit_result.get_data_hist(50, (1.0, 2.0))
-        fit_hist = fit_result.get_fit_hist(50, (1.0, 2.0))
-        s0p_hist = fit_result.get_s0p_hist(50, (1.0, 2.0))
-        s0n_hist = fit_result.get_s0n_hist(50, (1.0, 2.0))
-        d2p_hist = fit_result.get_d2p_hist(50, (1.0, 2.0))
         fig, ax = plt.subplots(ncols=2, sharey=True)
         ax[0].stairs(
             data_hist.counts,
@@ -92,7 +96,6 @@ class FitUnbinned(luigi.Task):
         ax[1].stairs(
             data_hist.counts,
             data_hist.bins,
-            histtype='step',
             color=colors.black,
             label='Data',
         )
@@ -132,7 +135,7 @@ class FitUnbinned(luigi.Task):
         ax[1].legend()
         ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
         ax[1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        bin_width_mev = int(1000 / 50)
+        bin_width_mev = int(1000 / NBINS)
         ax[0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
         fig.savefig(output_plot_path)
         plt.close()

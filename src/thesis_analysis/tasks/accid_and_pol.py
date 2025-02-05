@@ -2,6 +2,7 @@ from pathlib import Path
 
 import luigi
 from numpy.typing import NDArray
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.paths import Paths
@@ -22,9 +23,7 @@ class AccidentalsAndPolarization(luigi.Task):
         input_path = Path(self.input()[0][0].path)
         return [
             luigi.LocalTarget(
-                Path(str(input_path)).parent
-                / Path('accpol')
-                / Path(str(input_path)).name
+                Path(str(input_path)).parent / f'{input_path.stem}_accpol.root'
             )
         ]
 
@@ -32,9 +31,8 @@ class AccidentalsAndPolarization(luigi.Task):
         ccdb_data = Paths.ccdb
         rcdb_data = Paths.rcdb
         input_path = Path(self.input()[0][0].path)
-        output_dir = Path(str(input_path)).parent / Path('accpol')
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / Path(str(input_path)).name
+        output_path = Path(self.output()[0].path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         is_mc = self.data_type != 'data'
 
         branches = [
