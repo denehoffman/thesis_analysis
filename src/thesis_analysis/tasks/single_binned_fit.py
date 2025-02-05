@@ -22,8 +22,22 @@ class SingleBinnedFit(luigi.Task):
 
     def requires(self):
         return [
-            SPlotWeights('data', self.run_period, self.chisqdof),
-            SPlotWeights('accmc', self.run_period, self.chisqdof),
+            SPlotWeights(
+                'data',
+                self.run_period,
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+            ),
+            SPlotWeights(
+                'accmc',
+                self.run_period,
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+            ),
         ]
 
     def output(self):

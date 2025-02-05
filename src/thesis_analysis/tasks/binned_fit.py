@@ -21,10 +21,24 @@ class BinnedFit(luigi.Task):
 
     def requires(self):
         return [
-            SPlotWeights('data', run_period, self.chisqdof)
+            SPlotWeights(
+                'data',
+                run_period,
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+            )
             for run_period in RUN_PERIODS
         ] + [
-            SPlotWeights('accmc', run_period, self.chisqdof)
+            SPlotWeights(
+                'accmc',
+                run_period,
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+            )
             for run_period in RUN_PERIODS
         ]
 
