@@ -8,7 +8,7 @@ from thesis_analysis.constants import (
     RUN_PERIODS,
 )
 from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.factorization_fits import FactorizationFits
+from thesis_analysis.tasks.factorization_fit import FactorizationFit
 from thesis_analysis.tasks.factorization_plot import FactorizationPlot
 from thesis_analysis.utils import (
     FactorizationFitResult,
@@ -21,7 +21,7 @@ class FactorizationReport(luigi.Task):
 
     def requires(self):
         return [
-            FactorizationFits(data_type, run_period, self.chisqdof, n_quantiles)
+            FactorizationFit(data_type, run_period, self.chisqdof, n_quantiles)
             for run_period in RUN_PERIODS
             for n_quantiles in range(2, int(self.max_quantiles) + 1)  # type: ignore
             for data_type in ['data', 'accmc', 'bkgmc']

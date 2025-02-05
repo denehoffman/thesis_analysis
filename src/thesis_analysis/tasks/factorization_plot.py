@@ -15,7 +15,7 @@ from thesis_analysis.constants import (
 )
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.tasks.factorization_fits import FactorizationFits
+from thesis_analysis.tasks.factorization_fit import FactorizationFit
 from thesis_analysis.utils import (
     FactorizationFitResult,
     get_quantile_edges,
@@ -31,7 +31,7 @@ class FactorizationPlot(luigi.Task):
     def requires(self):
         return [
             ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
-            FactorizationFits(
+            FactorizationFit(
                 self.data_type, self.run_period, self.chisqdof, self.n_quantiles
             ),
         ]
