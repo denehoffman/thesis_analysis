@@ -475,7 +475,7 @@ def run_factorization_fits(
         name=[f'z{i}' for i in range(bins)] + ['lda_s', 'lda_b'],
     )
     for i in range(bins):
-        h0.limits[f'z{i}'] = (0.0, None)
+        h0.limits[f'z{i}'] = (0.0, 1.0)
     h0.limits['lda_s'] = (5.0, 20.0)
     h0.limits['lda_b'] = (80.0, 120.0)
     h0.migrad(ncall=10_000)
@@ -486,7 +486,7 @@ def run_factorization_fits(
     h1s = []
     for i in range(bins):
         h1 = Minuit(nlls[i], z=0.5, lda_s=12.0, lda_b=100.0)  # type: ignore
-        h1.limits['z'] = (0.0, None)
+        h1.limits['z'] = (0.0, 1.0)
         h1.limits['lda_s'] = (5.0, 20.0)
         h1.limits['lda_b'] = (80.0, 120.0)
         h1.migrad(ncall=10_000)
