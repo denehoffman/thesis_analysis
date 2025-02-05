@@ -469,13 +469,14 @@ def fit_unbinned(
     rng = np.random.default_rng(0)
     for iiter in range(niters):
         logger.info(f'Fitting iteration {iiter}')
-        p0 = (
+        p_init = (
             p0
             if p0 is not None
             else rng.uniform(-1000.0, 1000.0, len(total_nll.parameters))
         )
+        logger.debug(f'Initial p0: {p_init}')
         iter_status = total_nll.minimize(
-            p0,
+            p_init,
             observers=[LoggingObserver()],
             threads=NUM_THREADS,
             skip_hessian=True,
@@ -528,6 +529,7 @@ def fit_binned(
         for iiter in range(niters):
             logger.info(f'Fitting iteration {iiter}')
             p0 = rng.uniform(-100.0, 100.0, len(total_nll.parameters))
+            logger.debug(f'Initial p0: {p0}')
             iter_status = total_nll.minimize(
                 p0,
                 observers=[LoggingObserver()],
@@ -662,6 +664,8 @@ def fit_unbinned_guided(
         f'First guided evaluation: {guided_nll.evaluate([1.0] * len(guided_nll.parameters))}'
     )
     ndof = NBINS * len(wavesets) - len(guided_nll.parameters)
+    if not isinstance(binned_result, BinnedFitResult):
+        ndof *= len(datasets[0])
     all_statuses = []
     status = None
     i_best = None
@@ -670,9 +674,10 @@ def fit_unbinned_guided(
     for iiter in range(niters):
         logger.info(f'Fitting iteration {iiter}')
         logger.info('Starting guided fit')
-
+        p0 = rng.uniform(-1000.0, 1000.0, len(guided_nll.parameters))
+        logger.debug(f'Initial p0: {p0}')
         iter_status = guided_nll.minimize(
-            rng.uniform(-1000.0, 1000.0, len(guided_nll.parameters)),
+            p0,
             observers=[GuidedLoggingObserver(ndof)],
             threads=NUM_THREADS,
             max_steps=GUIDED_MAX_STEPS,
