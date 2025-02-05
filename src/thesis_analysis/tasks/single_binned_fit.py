@@ -9,6 +9,7 @@ from thesis_analysis.pwa import (
     AnalysisPath,
     fit_binned,
 )
+from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
@@ -30,13 +31,10 @@ class SingleBinnedFit(luigi.Task):
                 self.nsig,
                 self.nbkg,
             ),
-            SPlotWeights(
+            ChiSqDOF(
                 'accmc',
                 self.run_period,
                 self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
             ),
         ]
 

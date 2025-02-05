@@ -10,6 +10,7 @@ from thesis_analysis.pwa import (
     UnbinnedFitResult,
     fit_unbinned,
 )
+from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.guided_fit import GuidedFit
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
@@ -35,13 +36,10 @@ class UnbinnedFit(luigi.Task):
             )
             for run_period in RUN_PERIODS
         ] + [
-            SPlotWeights(
+            ChiSqDOF(
                 'accmc',
                 run_period,
                 self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
             )
             for run_period in RUN_PERIODS
         ]
