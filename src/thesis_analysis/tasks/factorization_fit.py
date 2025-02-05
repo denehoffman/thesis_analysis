@@ -12,6 +12,7 @@ from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.utils import (
     run_factorization_fits,
+    run_factorization_fits_mc,
 )
 
 
@@ -51,11 +52,20 @@ class FactorizationFit(luigi.Task):
             ],
         )
 
-        fit_result = run_factorization_fits(
-            data_df['RFL1'],
-            data_df['RFL2'],
-            data_df['Weight'],
-            data_df[SPLOT_CONTROL],
-            bins=n_quantiles,
-        )
+        if self.data_type in ['accmc', 'bkgmc']:
+            fit_result = run_factorization_fits_mc(
+                data_df['RFL1'],
+                data_df['RFL2'],
+                data_df['Weight'],
+                data_df[SPLOT_CONTROL],
+                bins=n_quantiles,
+            )
+        else:
+            fit_result = run_factorization_fits(
+                data_df['RFL1'],
+                data_df['RFL2'],
+                data_df['Weight'],
+                data_df[SPLOT_CONTROL],
+                bins=n_quantiles,
+            )
         pickle.dump(fit_result, output_fit_path.open('wb'))

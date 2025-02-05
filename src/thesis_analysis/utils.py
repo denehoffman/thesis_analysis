@@ -505,7 +505,7 @@ def run_factorization_fits(
     )
 
 
-def get_factorization_fits_mc(
+def run_factorization_fits_mc(
     rfl1: np.ndarray,
     rfl2: np.ndarray,
     weight: np.ndarray,
