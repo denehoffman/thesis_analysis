@@ -14,9 +14,9 @@ from thesis_analysis.constants import (
     get_branch,
 )
 from thesis_analysis.paths import Paths
+from thesis_analysis.splot import SPlotFitResult, exp_pdf_single
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_fit import SPlotFit
-from thesis_analysis.utils import SPlotFitResult, exp_pdf_single
 
 
 class SPlotPlot(luigi.Task):
@@ -148,7 +148,7 @@ class SPlotPlot(luigi.Task):
             label='Total Fit',
         )
         ax.set_xlabel(
-            f'{BRANCH_NAME_TO_LATEX['RFL1']} ({BRANCH_NAME_TO_LATEX_UNITS['RFL1']})'
+            f'{BRANCH_NAME_TO_LATEX["RFL1"]} ({BRANCH_NAME_TO_LATEX_UNITS["RFL1"]})'
         )
         ax.set_ylabel(
             f'Counts / {bin_width:.3f} {BRANCH_NAME_TO_LATEX_UNITS["RFL1"]}'

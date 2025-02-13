@@ -7,8 +7,8 @@ import numpy as np
 from thesis_analysis import root_io
 from thesis_analysis.constants import RUN_PERIODS, SPLOT_CONTROL, get_branch
 from thesis_analysis.paths import Paths
+from thesis_analysis.splot import run_splot_fit
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.utils import run_splot_fit
 
 
 class SPlotFit(luigi.Task):

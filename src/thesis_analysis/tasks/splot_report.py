@@ -5,9 +5,9 @@ import numpy as np
 
 from thesis_analysis.constants import SPLOT_METHODS
 from thesis_analysis.paths import Paths
+from thesis_analysis.splot import SPlotFitResult
 from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
-from thesis_analysis.utils import SPlotFitResult
 
 
 class SPlotReport(luigi.Task):
@@ -111,24 +111,24 @@ class SPlotReport(luigi.Task):
                         fit_result.aic == min_aic
                         and fit_result.aic == min_aic_non_factorizing
                     ):
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.aic - min_aic:.3f}$}}}}{'${}^\\dagger$' if not fit_result.converged else ''} & '
+                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.aic - min_aic:.3f}$}}}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
                     elif fit_result.aic == min_aic:
-                        out_text += f'\\underline{{${fit_result.aic - min_aic:.3f}$}}{'${}^\\dagger$' if not fit_result.converged else ''} & '
+                        out_text += f'\\underline{{${fit_result.aic - min_aic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
                     elif fit_result.aic == min_aic_non_factorizing:
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.aic - min_aic:.3f}$}}{'${}^\\dagger$' if not fit_result.converged else ''} & '
+                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.aic - min_aic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
                     else:
-                        out_text += f'${fit_result.aic - min_aic:.3f}${'${}^\\dagger$' if not fit_result.converged else ''} & '
+                        out_text += f'${fit_result.aic - min_aic:.3f}${"${}^\\dagger$" if not fit_result.converged else ""} & '
                     if (
                         fit_result.bic == min_bic
                         and fit_result.bic == min_bic_non_factorizing
                     ):
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.bic - min_bic:.3f}$}}}}{'${}^\\dagger$' if not fit_result.converged else ''}'
+                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.bic - min_bic:.3f}$}}}}{"${}^\\dagger$" if not fit_result.converged else ""}'
                     elif fit_result.bic == min_bic:
-                        out_text += f'\\underline{{${fit_result.bic - min_bic:.3f}$}}{'${}^\\dagger$' if not fit_result.converged else ''}'
+                        out_text += f'\\underline{{${fit_result.bic - min_bic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""}'
                     elif fit_result.bic == min_bic_non_factorizing:
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.bic - min_bic:.3f}$}}{'${}^\\dagger$' if not fit_result.converged else ''}'
+                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.bic - min_bic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""}'
                     else:
-                        out_text += f'${fit_result.bic - min_bic:.3f}${'{}^\\dagger' if not fit_result.converged else ''}'
+                        out_text += f'${fit_result.bic - min_bic:.3f}${"{}^\\dagger" if not fit_result.converged else ""}'
                     if (
                         nsig == int(self.nsig_max)  # type: ignore
                         and nbkg == int(self.nbkg_max)  # type: ignore
