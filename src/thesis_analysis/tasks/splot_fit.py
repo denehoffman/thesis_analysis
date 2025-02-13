@@ -2,9 +2,10 @@ import pickle
 from pathlib import Path
 
 import luigi
+import numpy as np
 
 from thesis_analysis import root_io
-from thesis_analysis.constants import SPLOT_CONTROL, get_branch
+from thesis_analysis.constants import RUN_PERIODS, SPLOT_CONTROL, get_branch
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.utils import run_splot_fit
@@ -12,7 +13,6 @@ from thesis_analysis.utils import run_splot_fit
 
 class SPlotFit(luigi.Task):
     data_type = luigi.Parameter()
-    run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
@@ -20,51 +20,114 @@ class SPlotFit(luigi.Task):
 
     def requires(self):
         return [
-            ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
-            ChiSqDOF('accmc', self.run_period, self.chisqdof),
-            ChiSqDOF('bkgmc', self.run_period, self.chisqdof),
+            ChiSqDOF(data_type, run_period, self.chisqdof)
+            for run_period in RUN_PERIODS
+            for data_type in [self.data_type, 'accmc', 'bkgmc']
         ]
 
     def output(self):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'splot_fit_{self.data_type}_{self.run_period}_chisqdof_{self.chisqdof:.1f}_{self.splot_method}_{self.nsig}s_{self.nbkg}b.root'
+                / f'splot_fit_{self.data_type}_chisqdof_{self.chisqdof:.1f}_{self.splot_method}_{self.nsig}s_{self.nbkg}b.pkl'
             )
         ]
 
     def run(self):
-        input_data_path = Path(self.input()[0][0].path)
-        input_accmc_path = Path(self.input()[1][0].path)
-        input_bkgmc_path = Path(self.input()[2][0].path)
+        input_data_paths = [
+            Path(self.input()[3 * i + 0][0].path)
+            for i in range(len(RUN_PERIODS))
+        ]
+        input_accmc_paths = [
+            Path(self.input()[3 * i + 1][0].path)
+            for i in range(len(RUN_PERIODS))
+        ]
+        input_bkgmc_paths = [
+            Path(self.input()[3 * i + 2][0].path)
+            for i in range(len(RUN_PERIODS))
+        ]
         output_path = Path(self.output()[0].path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         nsig = int(self.nsig)  # type: ignore
         nbkg = int(self.nbkg)  # type: ignore
 
-        data_df = root_io.get_branches(
-            input_data_path,
-            [get_branch('RFL1'), get_branch('RFL2'), get_branch('Weight')],
-        )
-        accmc_df = root_io.get_branches(
-            input_accmc_path,
-            [
-                get_branch('RFL1'),
-                get_branch('RFL2'),
-                get_branch('Weight'),
-                get_branch(SPLOT_CONTROL),
-            ],
-        )
-        bkgmc_df = root_io.get_branches(
-            input_bkgmc_path,
-            [
-                get_branch('RFL1'),
-                get_branch('RFL2'),
-                get_branch('Weight'),
-                get_branch(SPLOT_CONTROL),
-            ],
-        )
+        data_dfs = {
+            i: root_io.get_branches(
+                input_data_paths[i],
+                [
+                    get_branch('RFL1'),
+                    get_branch('RFL2'),
+                    get_branch('Weight'),
+                ],
+            )
+            for i in range(len(RUN_PERIODS))
+        }
+        data_df = {
+            'RFL1': np.concatenate(
+                [data_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
+            ),
+            'RFL2': np.concatenate(
+                [data_dfs[i]['RFL2'] for i in range(len(RUN_PERIODS))]
+            ),
+            'Weight': np.concatenate(
+                [data_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
+            ),
+        }
+
+        accmc_dfs = {
+            i: root_io.get_branches(
+                input_accmc_paths[i],
+                [
+                    get_branch('RFL1'),
+                    get_branch('RFL2'),
+                    get_branch('Weight'),
+                    get_branch(SPLOT_CONTROL),
+                ],
+            )
+            for i in range(len(RUN_PERIODS))
+        }
+        accmc_df = {
+            'RFL1': np.concatenate(
+                [accmc_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
+            ),
+            'RFL2': np.concatenate(
+                [accmc_dfs[i]['RFL2'] for i in range(len(RUN_PERIODS))]
+            ),
+            'Weight': np.concatenate(
+                [accmc_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
+            ),
+            SPLOT_CONTROL: np.concatenate(
+                [accmc_dfs[i][SPLOT_CONTROL] for i in range(len(RUN_PERIODS))]
+            ),
+        }
+
+        bkgmc_dfs = {
+            i: root_io.get_branches(
+                input_bkgmc_paths[i],
+                [
+                    get_branch('RFL1'),
+                    get_branch('RFL2'),
+                    get_branch('Weight'),
+                    get_branch(SPLOT_CONTROL),
+                ],
+            )
+            for i in range(len(RUN_PERIODS))
+        }
+        bkgmc_df = {
+            'RFL1': np.concatenate(
+                [bkgmc_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
+            ),
+            'RFL2': np.concatenate(
+                [bkgmc_dfs[i]['RFL2'] for i in range(len(RUN_PERIODS))]
+            ),
+            'Weight': np.concatenate(
+                [bkgmc_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
+            ),
+            SPLOT_CONTROL: np.concatenate(
+                [bkgmc_dfs[i][SPLOT_CONTROL] for i in range(len(RUN_PERIODS))]
+            ),
+        }
 
         fit_result = run_splot_fit(
             data_df['RFL1'],

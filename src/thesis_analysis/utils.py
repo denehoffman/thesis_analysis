@@ -138,6 +138,7 @@ class SPlotFitResult:
     lda_fits_bkg: list[FitResult]
     total_fit: FitResult
     v: np.ndarray
+    converged: bool
 
     def save(self, path: Path | str):
         path = Path(path)
@@ -238,7 +239,8 @@ def fit_components(
     n_spec: int,
 ) -> tuple[list[float], list[Minuit]]:
     tot_nevents = np.sum(weight)
-    mass_bins = np.quantile(control, np.linspace(0, 1, n_spec + 1))
+
+    mass_bins = get_quantile_edges(control, bins=n_spec, weights=weight)
     binned_nevents = []
     fits = []
     for c_lo, c_hi in zip(mass_bins[:-1], mass_bins[1:]):
@@ -324,7 +326,8 @@ def run_splot_fit(
     if not m.valid:
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
-        raise Exception('sPlot yield fit failed!')
+        # raise Exception('sPlot yield fit failed!')
+        # for now, just continue, we expect some of these to not perform as well
     yields = [m.values[f'y{i}'] for i in range(n_spec)]
     ldas = [m.values[f'lda{i}'] for i in range(n_spec)]
     logger.debug(f'Yields (fit): {yields}')
@@ -359,6 +362,7 @@ def run_splot_fit(
         ],
         FitResult.from_minuit(m, len(rfl1)),
         v,
+        m.valid,
     )
     return fit_result
 
@@ -414,14 +418,27 @@ class FactorizationFitResult:
         return Significance(r, self.ndof)
 
 
-def get_quantile_edges(variable: np.ndarray, *, bins: int) -> np.ndarray:
-    return np.quantile(variable, np.linspace(0, 1, bins + 1))
+def get_quantile_edges(
+    variable: np.ndarray, *, bins: int, weights: np.ndarray
+) -> np.ndarray:
+    # This is a custom wrapper method around numpy.quantile that
+    # first rescales the weights so that they are between 0 and 1
+    # and then runs the quantile method with those weights
+    scaled_weights = (weights - np.min(weights)) / (
+        np.max(weights) - np.min(weights)
+    )
+    return np.quantile(
+        variable,
+        np.linspace(0, 1, bins + 1),
+        weights=scaled_weights,
+        method='inverted_cdf',
+    )
 
 
 def get_quantile_indices(
-    variable: np.ndarray, *, bins: int
+    variable: np.ndarray, *, bins: int, weights: np.ndarray
 ) -> list[np.ndarray]:
-    quantiles = get_quantile_edges(variable, bins=bins)
+    quantiles = get_quantile_edges(variable, bins=bins, weights=weights)
     quantiles[-1] = (
         np.inf
     )  # ensure the maximum value gets placed in the last bin
@@ -437,7 +454,7 @@ def run_factorization_fits(
     *,
     bins: int,
 ) -> FactorizationFitResult:
-    quantile_indices = get_quantile_indices(control, bins=bins)
+    quantile_indices = get_quantile_indices(control, bins=bins, weights=weight)
 
     def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
         def nll(z: float, lda_s: float, lda_b: float) -> float:
@@ -517,7 +534,7 @@ def run_factorization_fits_mc(
     *,
     bins: int,
 ) -> FactorizationFitResult:
-    quantile_indices = get_quantile_indices(control, bins=bins)
+    quantile_indices = get_quantile_indices(control, bins=bins, weights=weight)
 
     def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
         def nll(lda: float) -> float:

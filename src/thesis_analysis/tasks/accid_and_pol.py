@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import luigi
+import numpy as np
 from numpy.typing import NDArray
 
 from thesis_analysis import root_io
@@ -37,6 +38,9 @@ class AccidentalsAndPolarization(luigi.Task):
 
         branches = [
             get_branch('RunNumber'),
+            get_branch('EventNumber'),
+            get_branch('ComboNumber'),
+            get_branch('ChiSqDOF'),
             get_branch('E_Beam'),
             get_branch('Px_Beam'),
             get_branch('Py_Beam'),
@@ -45,9 +49,35 @@ class AccidentalsAndPolarization(luigi.Task):
             get_branch('Weight'),
         ]
 
+        best_combo_map = {}
+        best_combo_chi2_map = {}
+
+        def scan_combos(
+            _i: int,
+            run_number: NDArray,
+            event_number: NDArray,
+            combo_number: NDArray,
+            chisqdof: NDArray,
+            *args,
+            **kwargs,
+        ):
+            best_combo_chi2 = best_combo_chi2_map.get(
+                (run_number[0], event_number[0]), np.inf
+            )
+            if chisqdof[0] < best_combo_chi2:
+                best_combo_chi2_map[(run_number[0], event_number[0])] = (
+                    chisqdof[0]
+                )
+                best_combo_map[(run_number[0], event_number[0])] = combo_number[
+                    0
+                ]
+
         def process(
             _i: int,
             run_number: NDArray,
+            event_number: NDArray,
+            combo_number: NDArray,
+            _chisqdof: NDArray,
             e_beam: NDArray,
             px_beam: NDArray,
             py_beam: NDArray,
@@ -59,6 +89,11 @@ class AccidentalsAndPolarization(luigi.Task):
             *,
             is_mc: bool,
         ) -> bool:
+            if (
+                best_combo_map.get((run_number[0], event_number[0]), -1)
+                != combo_number
+            ):
+                return False
             new_weight = ccdb_data.get_accidental_weight(
                 run_number[0], e_beam[0], rf[0], weight[0], is_mc=is_mc
             )
@@ -73,10 +108,11 @@ class AccidentalsAndPolarization(luigi.Task):
             pz_beam[0] = 0.0
             return True
 
-        root_io.process_root_tree(
+        root_io.double_process_root_tree(
             input_path,
             output_path,
             branches,
+            scan_combos,
             process,
             ccdb_data,
             rcdb_data,

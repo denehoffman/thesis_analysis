@@ -6,8 +6,8 @@ from numpy.typing import NDArray
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.tasks.plot_splot import PlotSPlot
 from thesis_analysis.tasks.splot_fit import SPlotFit
+from thesis_analysis.tasks.splot_plot import SPlotPlot
 from thesis_analysis.utils import SPlotFitResult, get_sweights
 
 
@@ -24,15 +24,13 @@ class SPlotWeights(luigi.Task):
             ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
             SPlotFit(
                 self.data_type,
-                self.run_period,
                 self.chisqdof,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
             ),
-            PlotSPlot(
+            SPlotPlot(
                 self.data_type,
-                self.run_period,
                 self.chisqdof,
                 self.splot_method,
                 self.nsig,

@@ -27,24 +27,5 @@
 @open:
   python3 -m webbrowser "localhost:8082"
 
-
-clean level:
-  #!/usr/bin/env bash
-  set -euxo pipefail
-  case {{level}} in
-    "accpol")
-      find analysis/datasets -type d -name "accpol" -print -exec rm -rf {} \;
-      ;;
-    "chisqdof")
-      find analysis/datasets -type d -name "chisqdof_*" -print  -exec rm -rf {} \;
-      ;;
-    "splot")
-      find analysis/datasets -type d -name "splot*" -print -exec rm -rf {} \;
-      ;;
-    "plots")
-      rm -rf analysis/plots/*
-      ;;
-    *)
-      echo "Unknown level: {{level}}. Valid levels are: accpol, chisqdof, splot."
-      ;;
-  esac
+@transfer:
+  cp analysis/plots/* ../../thesis/figures/

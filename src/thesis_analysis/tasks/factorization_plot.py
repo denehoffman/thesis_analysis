@@ -4,12 +4,14 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+import numpy as np
 
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
     BRANCH_NAME_TO_LATEX_UNITS,
     MC_TYPES,
+    RUN_PERIODS,
     SPLOT_CONTROL,
     get_branch,
 )
@@ -24,51 +26,73 @@ from thesis_analysis.utils import (
 
 class FactorizationPlot(luigi.Task):
     data_type = luigi.Parameter()
-    run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
     n_quantiles = luigi.IntParameter()
 
     def requires(self):
         return [
-            ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
-            FactorizationFit(
-                self.data_type, self.run_period, self.chisqdof, self.n_quantiles
-            ),
+            ChiSqDOF(self.data_type, run_period, self.chisqdof)
+            for run_period in RUN_PERIODS
+        ] + [
+            FactorizationFit(self.data_type, self.chisqdof, self.n_quantiles),
         ]
 
     def output(self):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'factorization_plot_{self.data_type}_{self.run_period}_chisqdof_{self.chisqdof:.1f}_{self.n_quantiles}_quantiles.png'
+                / f'factorization_plot_{self.data_type}_chisqdof_{self.chisqdof:.1f}_{self.n_quantiles}_quantiles.png'
             ),
         ]
 
     def run(self):
-        input_data_path = Path(self.input()[0][0].path)
+        input_data_paths = [
+            Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
+        ]
+        input_fit: FactorizationFitResult = pickle.load(
+            Path(self.input()[-1][0].path).open('rb')
+        )
         output_plot_path = Path(self.output()[0].path)
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
 
-        data_df = root_io.get_branches(
-            input_data_path,
-            [
-                get_branch('RFL1'),
-                get_branch('Weight'),
-                get_branch(SPLOT_CONTROL),
-            ],
-        )
-
-        input_fit: FactorizationFitResult = pickle.load(
-            Path(self.input()[1][0].path).open('rb')
-        )
+        data_dfs = {
+            i: root_io.get_branches(
+                input_data_paths[i],
+                [
+                    get_branch('RFL1'),
+                    get_branch('Weight'),
+                    get_branch(SPLOT_CONTROL),
+                ],
+            )
+            for i in range(len(RUN_PERIODS))
+        }
+        data_df = {
+            'RFL1': np.concatenate(
+                [data_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
+            ),
+            'Weight': np.concatenate(
+                [data_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
+            ),
+            SPLOT_CONTROL: np.concatenate(
+                [data_dfs[i][SPLOT_CONTROL] for i in range(len(RUN_PERIODS))]
+            ),
+        }
 
         quantile_edges = get_quantile_edges(
             data_df[SPLOT_CONTROL],
             bins=int(self.n_quantiles),  # type: ignore
+            weights=data_df['Weight'],
         )
         quantile_centers = (quantile_edges[1:] + quantile_edges[:-1]) / 2
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
+        ax.vlines(
+            quantile_edges,
+            0,
+            1,
+            transform=ax.get_xaxis_transform(),
+            colors=colors.black,
+        )
 
         if self.data_type in MC_TYPES:
             for quantile_center, quantile_fit in zip(

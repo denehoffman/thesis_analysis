@@ -62,7 +62,7 @@ class UnbinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{'_guided' if self.guided else ''}.pkl'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{'_guided' if self.guided else ''}{'_averaged' if self.averaged else ''}.pkl'
             ),
         ]
 

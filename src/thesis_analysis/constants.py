@@ -9,6 +9,12 @@ RUN_PERIOD_LABELS = ['Spring 2017', 'Spring 2018', 'Fall 2018', 'Spring 2020']
 GLUEX_PHASE_I = ['s17', 's18', 'f18']
 GLUEX_PHASE_II = ['s20']
 DATA_TYPES = ['data', 'accmc', 'genmc', 'bkgmc']
+DATA_TYPE_TO_LATEX = {
+    'data': 'Data',
+    'accmc': '$K_S^0K_S^0$ MC',
+    'genmc': '$K^0_K^0$ MC (generated)',
+    'bkgmc': r'$4\pi$ MC',
+}
 MC_TYPES = ['accmc', 'genmc', 'bkgmc']
 CHISQDOF = [3.0, 3.5, 4.0, 4.5, 5.0]
 HOSTNAME = 'ernest.phys.cmu.edu'
@@ -193,8 +199,8 @@ BRANCH_NAME_TO_LATEX: dict[str, str] = {
     # 't_meson': np.float32,
     # 't_baryon': np.float32,
     # 't_baryon2': np.float32,
-    'RFL1': r'$\tau_{K_{S,1}^0}$',
-    'RFL2': r'$\tau_{K_{S,2}^0}$',
+    'RFL1': r'Rest-Frame Lifetime $t_{K_{S,1}^0}$',
+    'RFL2': r'Rest-Frame Lifetime $t_{K_{S,2}^0}$',
     # 'FS1': np.float32,
     # 'FS2': np.float32,
     'M_Resonance': '$m(K_S^0K_S^0)$',
@@ -203,7 +209,7 @@ BRANCH_NAME_TO_LATEX: dict[str, str] = {
     # 'M_PPiM1': np.float32,
     # 'M_PPiM2': np.float32,
     # 'LogConf': np.float32,
-    # 'ChiSqDOF': np.float32,
+    'ChiSqDOF': r'$\chi^2_\nu$',
     # 'RF': np.float32,
     # 'Proton_P': np.float32,
     # 'Proton_Theta': np.float32,

@@ -1,8 +1,12 @@
 import luigi
 
+# from thesis_analysis.tasks.binned_and_unbinned_plot import BinnedAndUnbinnedPlot
+from thesis_analysis.tasks.aux_plots import MakeAuxiliaryPlots
+from thesis_analysis.tasks.chisqdof_plot import ChiSqDOFPlot
 from thesis_analysis.tasks.factorization_report import FactorizationReport
+from thesis_analysis.tasks.mass_plot import MassPlot
+from thesis_analysis.tasks.rfl_plot import RFLPlot
 from thesis_analysis.tasks.splot_report import SPlotReport
-from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 
 
 class RunAll(luigi.WrapperTask):
@@ -15,18 +19,46 @@ class RunAll(luigi.WrapperTask):
                     nbkg_max=3,
                 ),
                 FactorizationReport(chisqdof=3.0, max_quantiles=4),
-                UnbinnedFit(chisqdof=3.0, splot_method='B', nsig=2, nbkg=2),
-                UnbinnedFit(
-                    chisqdof=3.0, splot_method='B', nsig=2, nbkg=2, guided=True
-                ),
-                UnbinnedFit(
+                RFLPlot('data', chisqdof=3.0),
+                RFLPlot('accmc', chisqdof=3.0),
+                RFLPlot('bkgmc', chisqdof=3.0),
+                ChiSqDOFPlot('data', bins=50),
+                MassPlot('data', bins=50),
+                ChiSqDOFPlot('accmc', bins=50),
+                ChiSqDOFPlot('data', bins=50, chisqdof=3.0),
+                MassPlot('data', bins=50, chisqdof=3.0),
+                ChiSqDOFPlot('accmc', bins=50, chisqdof=3.0),
+                ChiSqDOFPlot(
+                    'data',
+                    bins=50,
                     chisqdof=3.0,
                     splot_method='B',
                     nsig=2,
                     nbkg=2,
-                    guided=True,
-                    averaged=True,
                 ),
+                MassPlot(
+                    'data',
+                    bins=50,
+                    chisqdof=3.0,
+                    splot_method='B',
+                    nsig=2,
+                    nbkg=2,
+                ),
+                MakeAuxiliaryPlots(),
+                # BinnedAndUnbinnedPlot(
+                #     chisqdof=3.0, splot_method='B', nsig=2, nbkg=2
+                # ),
+                # UnbinnedFit(
+                #     chisqdof=3.0, splot_method='B', nsig=2, nbkg=2, guided=True
+                # ),
+                # BinnedAndUnbinnedPlot(
+                #     chisqdof=3.0,
+                #     splot_method='B',
+                #     nsig=2,
+                #     nbkg=2,
+                #     guided=True,
+                #     averaged=True,
+                # ),
             ]
             # [
             #     PlotUnbinnedInitialized(chisqdof=3.0, nsig=1, nbkg=1),

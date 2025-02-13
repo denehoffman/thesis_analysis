@@ -9,24 +9,28 @@ from thesis_analysis import colors
 from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import UnbinnedFitResult, Waveset
-from thesis_analysis.tasks.fit_unbinned_initialized import (
-    FitUnbinnedInitialized,
-)
+from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 
 
-class PlotUnbinnedInitialized(luigi.Task):
+class UnbinnedPlot(luigi.Task):
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
+    niters = luigi.IntParameter(default=3, significant=False)
+    guided = luigi.BoolParameter(default=False)
+    averaged = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
-            FitUnbinnedInitialized(
+            UnbinnedFit(
                 self.chisqdof,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
+                self.niters,
+                self.guided,
+                self.averaged,
             ),
         ]
 
@@ -34,7 +38,7 @@ class PlotUnbinnedInitialized(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'unbinned_fit_initialized_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{'_guided' if self.guided else ''}{'_averaged' if self.averaged else ''}.png'
             ),
         ]
 
