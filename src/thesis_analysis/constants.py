@@ -31,6 +31,7 @@ NUM_THREADS = 8
 NBINS = 40
 RANGE = (1.0, 2.0)
 GUIDED_MAX_STEPS = 100
+RFL_RANGE = (0.0, 0.2)
 
 SIG_QUANTILES = [2, 3, 4, 5]
 
@@ -178,7 +179,7 @@ def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
 
 
 SPLOT_CONTROL = 'M_Resonance'
-SPLOT_METHODS = ['A', 'B', 'C']
+SPLOT_METHODS = ['A', 'B', 'C', 'D', 'D-fixed']
 
 BRANCH_NAME_TO_LATEX: dict[str, str] = {
     'RunNumber': 'Run Number',

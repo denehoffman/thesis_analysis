@@ -14,7 +14,11 @@ from thesis_analysis.constants import (
     get_branch,
 )
 from thesis_analysis.paths import Paths
-from thesis_analysis.splot import SPlotFitResult, exp_pdf_single
+from thesis_analysis.splot import (
+    SPlotFitResult,
+    SPlotFitResultD,
+    exp_pdf_single,
+)
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_fit import SPlotFit
 
@@ -79,7 +83,10 @@ class SPlotPlot(luigi.Task):
             ),
         }
 
-        fit_result = SPlotFitResult.load(input_fit_path)
+        if not str(self.splot_method).startswith('D'):
+            fit_result = SPlotFitResult.load(input_fit_path)
+        else:
+            fit_result = SPlotFitResultD.load(input_fit_path)
 
         nbins = 100
         mpl_style.use('thesis_analysis.thesis')
