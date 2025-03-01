@@ -16,12 +16,12 @@ from thesis_analysis.constants import (
     get_branch,
 )
 from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.tasks.factorization_fit import FactorizationFit
-from thesis_analysis.utils import (
+from thesis_analysis.splot import (
     FactorizationFitResult,
     get_quantile_edges,
 )
+from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.factorization_fit import FactorizationFit
 
 
 class FactorizationPlot(luigi.Task):

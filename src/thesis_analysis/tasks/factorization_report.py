@@ -4,11 +4,11 @@ from pathlib import Path
 import luigi
 
 from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.factorization_fit import FactorizationFit
-from thesis_analysis.tasks.factorization_plot import FactorizationPlot
-from thesis_analysis.utils import (
+from thesis_analysis.splot import (
     FactorizationFitResult,
 )
+from thesis_analysis.tasks.factorization_fit import FactorizationFit
+from thesis_analysis.tasks.factorization_plot import FactorizationPlot
 
 
 class FactorizationReport(luigi.Task):

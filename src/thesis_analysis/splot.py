@@ -8,21 +8,28 @@ import numpy as np
 from iminuit import Minuit
 from scipy.stats import chi2
 
+from thesis_analysis.constants import RFL_RANGE
 from thesis_analysis.logger import logger
 from thesis_analysis.utils import FitResult, Histogram
-from thesis_analysis.constants import RFL_RANGE
 
 
 def density_hist_to_pdf(
-    bin_edges: np.ndarray, counts: np.ndarray
-) -> Callable[[float], float]:
+    counts: np.ndarray,
+    bin_edges: np.ndarray,
+) -> Callable[[np.ndarray], np.ndarray]:
     def pdf(x: float) -> float:
         idx = np.searchsorted(bin_edges, x, side='right') - 1
         if idx < 0 or idx >= len(counts):
             return 0.0
         return counts[idx]
 
-    return pdf
+    vpdf = np.vectorize(pdf)
+
+    return vpdf
+
+
+class SPlotFitFailure:
+    pass
 
 
 @dataclass
@@ -152,19 +159,30 @@ class SPlotFitResultD:
             self.total_fit.values[f'y{i + self.nsig}'] for i in range(self.nbkg)
         ]
 
+    def pdfs1(self, rfl1: np.ndarray) -> list[np.ndarray]:
+        return [
+            density_hist_to_pdf(
+                self.hists_sig[i][0].counts, self.hists_sig[i][0].bins
+            )(rfl1)
+            for i in range(self.nsig)
+        ]
+
+    def pdfs2(self, rfl2: np.ndarray) -> list[np.ndarray]:
+        return [
+            density_hist_to_pdf(
+                self.hists_sig[i][1].counts, self.hists_sig[i][1].bins
+            )(rfl2)
+            for i in range(self.nsig)
+        ]
+
     def pdfs_sig(self, rfl1: np.ndarray, rfl2: np.ndarray) -> list[np.ndarray]:
         return [
-            np.array(
-                [
-                    density_hist_to_pdf(
-                        self.hists_sig[i][0].bins, self.hists_sig[i][0].counts
-                    )(rfl1[j])
-                    * density_hist_to_pdf(
-                        self.hists_sig[i][1].bins, self.hists_sig[i][1].counts
-                    )(rfl2[j])
-                    for j in range(len(rfl1))
-                ]
-            )
+            density_hist_to_pdf(
+                self.hists_sig[i][0].counts, self.hists_sig[i][0].bins
+            )(rfl1)
+            * density_hist_to_pdf(
+                self.hists_sig[i][1].counts, self.hists_sig[i][1].bins
+            )(rfl2)
             for i in range(self.nsig)
         ]
 
@@ -236,7 +254,7 @@ def fit_components_d(
     n_bins: int,
 ) -> tuple[
     list[float],
-    list[Callable[[float, float], float]],
+    list[Callable[[np.ndarray, np.ndarray], np.ndarray]],
     list[tuple[Histogram, Histogram]],
 ]:
     tot_nevents = np.sum(weight)
@@ -264,7 +282,7 @@ def fit_components_d(
             density=True,
         )
 
-        def pdf(t1: float, t2: float) -> float:
+        def pdf(t1: np.ndarray, t2: np.ndarray) -> np.ndarray:
             pdf1 = density_hist_to_pdf(*hist1)(t1)
             pdf2 = density_hist_to_pdf(*hist2)(t2)
             return pdf1 * pdf2
@@ -348,8 +366,7 @@ def run_splot_fit(
     if not m.valid:
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
-        # raise Exception('sPlot yield fit failed!')
-        # for now, just continue, we expect some of these to not perform as well
+        raise Exception('sPlot yield fit failed!')
     yields = [m.values[f'y{i}'] for i in range(n_spec)]
     ldas = [m.values[f'lda{i}'] for i in range(n_spec)]
     logger.debug(f'Yields (fit): {yields}')
@@ -421,27 +438,28 @@ def run_splot_fit_d(
     )
     nevents = np.sum(weight)
     # assume half the data is signal-like to initialize the fit
-    yields0 = [
+    yields_sig = [
         fit_fraction * 0.5 * nevents for fit_fraction in fit_fractions_sig
-    ] + [fit_fraction * 0.5 * nevents for fit_fraction in fit_fractions_bkg]
+    ]
+    yields_bkg = [
+        fit_fraction * 0.5 * nevents for fit_fraction in fit_fractions_bkg
+    ]
+    yields0 = yields_sig + yields_bkg
     logger.debug(f'Yields init: {yields0}')
     # get λs from fits
     ldas0 = [fit.values['lda'] for fit in fits_bkg]
     logger.debug(f'λs init: {ldas0}')
 
+    sig_pdfs_evaluated = [sig_pdf(rfl1, rfl2) for sig_pdf in sig_pdfs]
+
     def nll(*args: float) -> float:
         yields_sig = args[:nsig]
         yields_bkg = args[nsig::2]
         ldas = args[nsig + 1 :: 2]
+        yields = yields_sig + yields_bkg
         likelihoods = weight * np.log(
             np.sum(
-                [
-                    [
-                        yields_sig[i] * sig_pdfs[i](rfl1[j], rfl2[j])
-                        for j in range(len(rfl1))
-                    ]
-                    for i in range(nsig)
-                ],
+                [[yields_sig[i] * sig_pdfs_evaluated[i]] for i in range(nsig)],
                 axis=0,
             )
             + np.sum(
@@ -455,7 +473,7 @@ def run_splot_fit_d(
         )
         return -2 * (np.sum(np.sort(likelihoods)) - np.sum(yields))
 
-    p0 = list(itertools.chain(*zip(yields0, ldas0)))
+    p0 = yields_sig + list(itertools.chain(*zip(yields_bkg, ldas0)))
     name = [f'y{i}' for i in range(nsig)] + list(
         itertools.chain(
             *zip(
@@ -475,13 +493,14 @@ def run_splot_fit_d(
     if not m.valid:
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
-        # raise Exception('sPlot yield fit failed!')
-        # for now, just continue, we expect some of these to not perform as well
+        raise Exception('sPlot yield fit failed!')
     yields = [m.values[f'y{i}'] for i in range(n_spec)]
     ldas = [m.values[f'lda{nsig + i}'] for i in range(nbkg)]
     logger.debug(f'Yields (fit): {yields}')
     logger.debug(f'Background λs (fit): {ldas}')
-    pdfs = sig_pdfs + [exp_pdf(rfl1, rfl2, ldas[i]) for i in range(nbkg)]
+    pdfs = sig_pdfs_evaluated + [
+        exp_pdf(rfl1, rfl2, ldas[i]) for i in range(nbkg)
+    ]
     denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
     inds = np.argwhere(
         np.power(denom, 2) == 0.0
@@ -489,6 +508,10 @@ def run_splot_fit_d(
     denom[inds] += np.sqrt(
         np.finfo(float).eps
     )  # push these values just lightly away from zero
+    logger.debug(f'min(denom) = {denom.min()}')
+    logger.debug(f'max(denom) = {denom.max()}')
+    imax = denom.argmax()
+    logger.debug(f'pdfs at max = {[pdfs[k][imax] for k in range(n_spec)]}')
     v_inv = np.array(
         [
             [
@@ -498,6 +521,7 @@ def run_splot_fit_d(
             for i in range(n_spec)
         ]
     )
+    logger.debug(f'V⁻¹ = {v_inv.tolist()}')
     v = np.linalg.inv(v_inv)
     logger.debug(f'V = {v.tolist()}')
     fit_result = SPlotFitResultD(

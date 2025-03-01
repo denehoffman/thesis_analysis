@@ -1,4 +1,5 @@
 from pathlib import Path
+import pickle
 
 import luigi
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ from thesis_analysis.constants import (
 )
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
+    SPlotFitFailure,
     SPlotFitResult,
     SPlotFitResultD,
     exp_pdf_single,
@@ -83,14 +85,17 @@ class SPlotPlot(luigi.Task):
             ),
         }
 
-        if not str(self.splot_method).startswith('D'):
-            fit_result = SPlotFitResult.load(input_fit_path)
-        else:
-            fit_result = SPlotFitResultD.load(input_fit_path)
+        fit_result = pickle.load(input_fit_path.open('rb'))
 
         nbins = 100
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
+        if isinstance(fit_result, SPlotFitFailure):
+            plt.text(0.35, 0.5, 'Fit Failed!', dict(size=30))
+            fig.savefig(output_plot_path)
+            plt.close()
+            return
+
         ax.hist(
             data_df['RFL1'],
             weights=data_df['Weight'],
@@ -103,19 +108,25 @@ class SPlotPlot(luigi.Task):
         rfls = np.linspace(0.0, 0.2, 1000)
         ndata = np.sum(data_df['Weight'])
         z_total = np.sum(fit_result.yields)
-        sig_lines = [
-            exp_pdf_single(rfls, fit_result.ldas_sig[i])
-            * fit_result.yields_sig[i]
-            / z_total
-            for i in range(fit_result.nsig)
-        ]
-        sig_tot = np.sum(np.array(sig_lines), axis=0)
+        if isinstance(fit_result, SPlotFitResult):
+            sig_lines = [
+                exp_pdf_single(rfls, fit_result.ldas_sig[i])
+                * fit_result.yields_sig[i]
+                / z_total
+                for i in range(fit_result.nsig)
+            ]
+        else:
+            sig_lines = [
+                fit_result.pdfs1(rfls)[i] * fit_result.yields_sig[i] / z_total
+                for i in range(fit_result.nsig)
+            ]
         bkg_lines = [
             exp_pdf_single(rfls, fit_result.ldas_bkg[i])
             * fit_result.yields_bkg[i]
             / z_total
             for i in range(fit_result.nbkg)
         ]
+        sig_tot = np.sum(np.array(sig_lines), axis=0)
         bkg_tot = np.sum(np.array(bkg_lines), axis=0)
         tot_line = sig_tot + bkg_tot
         bin_width = 0.2 / nbins

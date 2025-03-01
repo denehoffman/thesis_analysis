@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import luigi
@@ -5,7 +6,7 @@ import numpy as np
 
 from thesis_analysis.constants import SPLOT_METHODS
 from thesis_analysis.paths import Paths
-from thesis_analysis.splot import SPlotFitResult
+from thesis_analysis.splot import SPlotFitFailure
 from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
 
@@ -51,7 +52,7 @@ class SPlotReport(luigi.Task):
         fit_results = {
             method: {
                 nsig: {
-                    nbkg: SPlotFitResult.load(
+                    nbkg: pickle.load(
                         Path(
                             self.input()[
                                 i
@@ -60,7 +61,7 @@ class SPlotReport(luigi.Task):
                                 + j * int(self.nbkg_max)  # type: ignore
                                 + k
                             ][0].path
-                        )
+                        ).open('rb')
                     )
                     for k, nbkg in enumerate(range(1, int(self.nbkg_max) + 1))  # type: ignore
                 }
@@ -85,6 +86,8 @@ class SPlotReport(luigi.Task):
             for nsig in range(1, int(self.nsig_max) + 1):  # type: ignore
                 for nbkg in range(1, int(self.nbkg_max) + 1):  # type: ignore
                     fit_result = fit_results[method][nsig][nbkg]
+                    if isinstance(fit_result, SPlotFitFailure):
+                        continue
                     if fit_result.aic < min_aic:
                         min_aic = fit_result.aic
                     if fit_result.bic < min_bic:
@@ -107,28 +110,31 @@ class SPlotReport(luigi.Task):
                         f'      {method_string} & ${nsig}$ & ${nbkg}$ & '
                     )
                     fit_result = fit_results[method][nsig][nbkg]
-                    if (
-                        fit_result.aic == min_aic
-                        and fit_result.aic == min_aic_non_factorizing
-                    ):
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.aic - min_aic:.3f}$}}}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
-                    elif fit_result.aic == min_aic:
-                        out_text += f'\\underline{{${fit_result.aic - min_aic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
-                    elif fit_result.aic == min_aic_non_factorizing:
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.aic - min_aic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""} & '
+                    if not isinstance(fit_result, SPlotFitFailure):
+                        if (
+                            fit_result.aic == min_aic
+                            and fit_result.aic == min_aic_non_factorizing
+                        ):
+                            out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.aic - min_aic:.3f}$}}}} & '
+                        elif fit_result.aic == min_aic:
+                            out_text += f'\\underline{{${fit_result.aic - min_aic:.3f}$}} & '
+                        elif fit_result.aic == min_aic_non_factorizing:
+                            out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.aic - min_aic:.3f}$}} & '
+                        else:
+                            out_text += f'${fit_result.aic - min_aic:.3f}$ & '
+                        if (
+                            fit_result.bic == min_bic
+                            and fit_result.bic == min_bic_non_factorizing
+                        ):
+                            out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.bic - min_bic:.3f}$}}}}'
+                        elif fit_result.bic == min_bic:
+                            out_text += f'\\underline{{${fit_result.bic - min_bic:.3f}$}}'
+                        elif fit_result.bic == min_bic_non_factorizing:
+                            out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.bic - min_bic:.3f}$}}'
+                        else:
+                            out_text += f'${fit_result.bic - min_bic:.3f}$'
                     else:
-                        out_text += f'${fit_result.aic - min_aic:.3f}${"${}^\\dagger$" if not fit_result.converged else ""} & '
-                    if (
-                        fit_result.bic == min_bic
-                        and fit_result.bic == min_bic_non_factorizing
-                    ):
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{\\underline{{${fit_result.bic - min_bic:.3f}$}}}}{"${}^\\dagger$" if not fit_result.converged else ""}'
-                    elif fit_result.bic == min_bic:
-                        out_text += f'\\underline{{${fit_result.bic - min_bic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""}'
-                    elif fit_result.bic == min_bic_non_factorizing:
-                        out_text += f'\\fcolorbox{{red}}{{white}}{{${fit_result.bic - min_bic:.3f}$}}{"${}^\\dagger$" if not fit_result.converged else ""}'
-                    else:
-                        out_text += f'${fit_result.bic - min_bic:.3f}${"{}^\\dagger" if not fit_result.converged else ""}'
+                        out_text += r'\textemdash & \textemdash'
                     if (
                         nsig == int(self.nsig_max)  # type: ignore
                         and nbkg == int(self.nbkg_max)  # type: ignore
@@ -143,7 +149,7 @@ class SPlotReport(luigi.Task):
                     else:
                         out_text += '\\\\\n'
         out_text += r"""    \end{tabular}
-    \caption{Relative AIC and BIC values for each fitting method. The absolute minimum values in each column are underlined, and the minimums excluding models with only one signal or background component are boxed.}\label{tab:splot-model-results}
+    \caption{Relative AIC and BIC values for each fitting method. The absolute minimum values in each column are underlined, and the minimums excluding models with only one signal or background component are boxed. Methods for which the fits did not converge or $V^{-1}$ was singular are omitted.}\label{tab:splot-model-results}
   \end{center}
 \end{table}"""
         output_path.write_text(out_text)

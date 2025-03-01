@@ -11,11 +11,11 @@ from thesis_analysis.constants import (
     get_branch,
 )
 from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.utils import (
+from thesis_analysis.splot import (
     run_factorization_fits,
     run_factorization_fits_mc,
 )
+from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
 
 class FactorizationFit(luigi.Task):

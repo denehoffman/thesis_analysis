@@ -166,7 +166,7 @@ class AnalysisPathSet:
 
 def get_binned_model() -> ld.Model:
     angles = ld.Angles(0, [1], [2], [2, 3])
-    polarization = ld.Polarization(0, [1])
+    polarization = ld.Polarization(0, [1], 0)
     manager = ld.Manager()
     z00p = manager.register(ld.Zlm('z00p', 0, 0, '+', angles, polarization))
     s0p = manager.register(ld.Scalar('s0p', ld.parameter('S0+ re')))
@@ -187,7 +187,7 @@ def get_binned_model() -> ld.Model:
 def get_unbinned_model() -> ld.Model:
     res_mass = ld.Mass([2, 3])
     angles = ld.Angles(0, [1], [2], [2, 3])
-    polarization = ld.Polarization(0, [1])
+    polarization = ld.Polarization(0, [1], 0)
     manager = ld.Manager()
     z00p = manager.register(ld.Zlm('z00p', 0, 0, '+', angles, polarization))
     z00n = manager.register(ld.Zlm('z00n', 0, 0, '-', angles, polarization))
@@ -592,7 +592,7 @@ def fit_binned(
         results.append(
             BinnedFitResultBin(
                 status,
-                np.sum(weights_data),
+                float(np.sum(weights_data)),
                 np.sum(weights_fit),
                 np.sum(weights_s0),
                 np.sum(weights_p),
@@ -625,9 +625,9 @@ def fit_unbinned_guided(
     wavesets = [Waveset.TOT, Waveset.P, Waveset.N, Waveset.S0P, Waveset.D2P]
     guided_manager = ld.LikelihoodManager()
     guided_terms = []
-    n_accmc_tot = sum([nll.accmc.weighted_len() for nll in nlls])
+    n_accmc_tot = sum([nll.accmc.n_events_weighted for nll in nlls])
     for i, nll in enumerate(nlls):
-        n_accmc = nll.accmc.weighted_len()
+        n_accmc = nll.accmc.n_events_weighted
         if isinstance(binned_result, BinnedFitResult):
             count_sets = [
                 binned_result.waveset_hists[waveset].counts

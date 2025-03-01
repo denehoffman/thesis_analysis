@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import luigi
@@ -5,7 +6,7 @@ from numpy.typing import NDArray
 
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
-from thesis_analysis.splot import SPlotFitResult, SPlotFitResultD, get_sweights
+from thesis_analysis.splot import get_sweights
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
@@ -57,10 +58,7 @@ class SPlotWeights(luigi.Task):
             input_path,
             [get_branch('RFL1'), get_branch('RFL2'), get_branch('Weight')],
         )
-        if not str(self.splot_method).startswith('D'):
-            fit_result = SPlotFitResult.load(input_fit_path)
-        else:
-            fit_result = SPlotFitResultD.load(input_fit_path)
+        fit_result = pickle.load(input_fit_path.open('rb'))
         weights = get_sweights(
             fit_result,
             data_df['RFL1'],

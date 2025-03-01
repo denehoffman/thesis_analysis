@@ -5,9 +5,18 @@ import luigi
 import numpy as np
 
 from thesis_analysis import root_io
-from thesis_analysis.constants import RUN_PERIODS, SPLOT_CONTROL, get_branch
+from thesis_analysis.constants import (
+    NSIG_BINS_DE,
+    RUN_PERIODS,
+    SPLOT_CONTROL,
+    get_branch,
+)
 from thesis_analysis.paths import Paths
-from thesis_analysis.splot import run_splot_fit, run_splot_fit_d
+from thesis_analysis.splot import (
+    SPlotFitFailure,
+    run_splot_fit,
+    run_splot_fit_d,
+)
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
 
@@ -129,41 +138,46 @@ class SPlotFit(luigi.Task):
             ),
         }
 
-        if not str(self.splot_method).startswith('D'):
-            fit_result = run_splot_fit(
-                data_df['RFL1'],
-                data_df['RFL2'],
-                data_df['Weight'],
-                accmc_df['RFL1'],
-                accmc_df['RFL2'],
-                accmc_df[SPLOT_CONTROL],
-                accmc_df['Weight'],
-                bkgmc_df['RFL1'],
-                bkgmc_df['RFL2'],
-                bkgmc_df[SPLOT_CONTROL],
-                bkgmc_df['Weight'],
-                nsig=nsig,
-                nbkg=nbkg,
-                fixed_sig=self.splot_method != 'A',
-                fixed_bkg=self.splot_method == 'C',
-            )
-        else:
-            fit_result = run_splot_fit_d(
-                data_df['RFL1'],
-                data_df['RFL2'],
-                data_df['Weight'],
-                accmc_df['RFL1'],
-                accmc_df['RFL2'],
-                accmc_df[SPLOT_CONTROL],
-                accmc_df['Weight'],
-                bkgmc_df['RFL1'],
-                bkgmc_df['RFL2'],
-                bkgmc_df[SPLOT_CONTROL],
-                bkgmc_df['Weight'],
-                nsig=nsig,
-                nsig_bins=50,
-                nbkg=nbkg,
-                fixed_bkg=self.splot_method == 'D-fixed',
-            )
+        try:
+            if not str(self.splot_method).startswith('D') and not str(
+                self.splot_method
+            ).startswith('E'):
+                fit_result = run_splot_fit(
+                    data_df['RFL1'],
+                    data_df['RFL2'],
+                    data_df['Weight'],
+                    accmc_df['RFL1'],
+                    accmc_df['RFL2'],
+                    accmc_df[SPLOT_CONTROL],
+                    accmc_df['Weight'],
+                    bkgmc_df['RFL1'],
+                    bkgmc_df['RFL2'],
+                    bkgmc_df[SPLOT_CONTROL],
+                    bkgmc_df['Weight'],
+                    nsig=nsig,
+                    nbkg=nbkg,
+                    fixed_sig=self.splot_method != 'A',
+                    fixed_bkg=self.splot_method == 'C',
+                )
+            else:
+                fit_result = run_splot_fit_d(
+                    data_df['RFL1'],
+                    data_df['RFL2'],
+                    data_df['Weight'],
+                    accmc_df['RFL1'],
+                    accmc_df['RFL2'],
+                    accmc_df[SPLOT_CONTROL],
+                    accmc_df['Weight'],
+                    bkgmc_df['RFL1'],
+                    bkgmc_df['RFL2'],
+                    bkgmc_df[SPLOT_CONTROL],
+                    bkgmc_df['Weight'],
+                    nsig=nsig,
+                    nsig_bins=NSIG_BINS_DE,
+                    nbkg=nbkg,
+                    fixed_bkg=self.splot_method == 'E',
+                )
+        except:
+            fit_result = SPlotFitFailure()
 
         pickle.dump(fit_result, output_path.open('wb'))
