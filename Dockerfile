@@ -1,9 +1,11 @@
-FROM ubuntu:24.10
+FROM ubuntu:latest
 
 RUN apt-get update && \
   apt-get install -y software-properties-common && \
   add-apt-repository multiverse && \
   apt-get update
+
+RUN apt-get install -y  texlive-full
 
 RUN apt-get install -y \
   build-essential \
@@ -46,7 +48,6 @@ RUN apt-get install -y \
   libssl-dev \
   curl \
   which \
-  texlive-full \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
@@ -58,7 +59,7 @@ RUN uv venv /opt/venv --python=3.13
 ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /opt
-RUN git clone --branch latest-stable https://github.com/root-project/root.git
+RUN git clone --branch latest-stable --depth=1 https://github.com/root-project/root.git
 
 WORKDIR /opt/root
 RUN mkdir root_build
@@ -71,6 +72,9 @@ ENV ROOTSYS=/usr/local
 ENV PATH=$ROOTSYS/bin:$PATH
 ENV LD_LIBRARY_PATH=$ROOTSYS/lib:$LD_LIBRARY_PATH
 ENV PYTHONPATH=$ROOTSYS/lib:$PYTHONPATH
+
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+RUN echo 'source $HOME/.cargo/env' >> $HOME/.bashrc
 
 RUN mkdir -p /var/log/luigi && chmod 777 /var/log/luigi
 
