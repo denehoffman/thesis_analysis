@@ -22,3 +22,6 @@ ksks-analysis = "thesis_analysis:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+thesis_analysis = ["*.mplstyle"]
