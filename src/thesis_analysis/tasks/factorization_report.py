@@ -2,7 +2,6 @@ import pickle
 from pathlib import Path
 
 import luigi
-
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     FactorizationFitResult,

@@ -3,7 +3,6 @@ from pathlib import Path
 
 import luigi
 import numpy as np
-
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     NSIG_BINS_DE,

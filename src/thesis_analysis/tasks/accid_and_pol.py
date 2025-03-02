@@ -3,7 +3,6 @@ from pathlib import Path
 import luigi
 import numpy as np
 from numpy.typing import NDArray
-
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.paths import Paths

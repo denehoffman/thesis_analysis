@@ -4,7 +4,6 @@ import matplotlib.style as mpl_style
 import numpy as np
 from scipy.integrate import quad
 from scipy.special import sph_harm
-
 from thesis_analysis.paths import Paths
 
 
@@ -119,19 +118,15 @@ class MakeAuxiliaryPlots(luigi.Task):
         plt.savefig(spherical_harmonics_path)
 
 
-def eval_t_k(
-    s: complex, m_a: np.ndarray, gamma_a: np.ndarray
-) -> np.complexfloating:
+def eval_t_k(s: complex, m_a: np.ndarray, gamma_a: np.ndarray) -> complex:
     g_a = np.sqrt(gamma_a / m_a)
-    k = np.sum(np.power(g_a, 2) / (np.power(m_a, 2) - s))
+    k = float(np.sum(np.power(g_a, 2) / (np.power(m_a, 2) - s)))
     return k / (1 - 1j * k)
 
 
-def eval_t_bw(
-    s: complex, m_a: np.ndarray, gamma_a: np.ndarray
-) -> np.complexfloating:
+def eval_t_bw(s: complex, m_a: np.ndarray, gamma_a: np.ndarray) -> complex:
     bw_a = (m_a * gamma_a) / (np.power(m_a, 2) - s - 1j * m_a * gamma_a)
-    return np.sum(bw_a)
+    return np.sum(bw_a, dtype=complex)
 
 
 def ylm(ell: int, m: int, costheta: float, phi: float) -> complex:

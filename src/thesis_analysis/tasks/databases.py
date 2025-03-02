@@ -1,5 +1,4 @@
 import luigi
-
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.scp import SCP
 

@@ -2,7 +2,6 @@ import pickle
 from pathlib import Path
 
 import luigi
-
 from thesis_analysis.constants import RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
@@ -68,7 +67,7 @@ class GuidedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{'_averaged' if self.averaged else ''}.pkl'
+                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}.pkl'
             ),
         ]
 

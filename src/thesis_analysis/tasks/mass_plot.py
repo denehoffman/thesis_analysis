@@ -3,7 +3,6 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
@@ -114,7 +113,7 @@ class MassPlot(luigi.Task):
             label=DATA_TYPE_TO_LATEX[str(self.data_type)],
         )
         ax.set_xlabel(
-            f'{BRANCH_NAME_TO_LATEX['M_Resonance']} ({BRANCH_NAME_TO_LATEX_UNITS['M_Resonance']})'
+            f'{BRANCH_NAME_TO_LATEX["M_Resonance"]} ({BRANCH_NAME_TO_LATEX_UNITS["M_Resonance"]})'
         )
         bin_width_mev = int(1000 / int(self.bins))  # type: ignore
         ax.set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')

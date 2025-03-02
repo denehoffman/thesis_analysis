@@ -4,7 +4,6 @@ import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
-
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -78,7 +77,7 @@ class RFLPlot(luigi.Task):
         )
         bin_width = 0.2 / nbins
         ax.set_xlabel(
-            f'{BRANCH_NAME_TO_LATEX['RFL1']} ({BRANCH_NAME_TO_LATEX_UNITS['RFL1']})'
+            f'{BRANCH_NAME_TO_LATEX["RFL1"]} ({BRANCH_NAME_TO_LATEX_UNITS["RFL1"]})'
         )
         ax.set_ylabel(
             f'Counts / {bin_width:.3f} {BRANCH_NAME_TO_LATEX_UNITS["RFL1"]}'

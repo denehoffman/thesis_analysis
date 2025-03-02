@@ -2,7 +2,6 @@ from pathlib import Path
 
 import luigi
 from numpy.typing import NDArray
-
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.tasks.accid_and_pol import AccidentalsAndPolarization

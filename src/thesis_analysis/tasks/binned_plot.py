@@ -4,7 +4,6 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.paths import Paths

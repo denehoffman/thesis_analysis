@@ -3,7 +3,6 @@ from pathlib import Path
 
 import luigi
 import numpy as np
-
 from thesis_analysis.constants import SPLOT_METHODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import SPlotFitFailure

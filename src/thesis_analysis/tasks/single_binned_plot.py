@@ -4,13 +4,12 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import BinnedFitResult, Waveset
-from thesis_analysis.tasks.fit_single_binned import FitSingleBinned
+from thesis_analysis.tasks.single_binned_fit import SingleBinnedFit
 
 
 class PlotSingleBinned(luigi.Task):
@@ -22,7 +21,7 @@ class PlotSingleBinned(luigi.Task):
 
     def requires(self):
         return [
-            FitSingleBinned(
+            SingleBinnedFit(
                 self.run_period,
                 self.chisqdof,
                 self.splot_method,

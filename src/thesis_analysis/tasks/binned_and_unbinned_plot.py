@@ -4,7 +4,6 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
 from thesis_analysis.paths import Paths
@@ -52,7 +51,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ''}{"_averaged" if self.averaged else ""}.png'
+                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}.png'
             ),
         ]
 
