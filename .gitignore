@@ -11,3 +11,6 @@ wheels/
 
 analysis/
 *.root
+luigi.log/
+luigi.pid
+slurm.log
