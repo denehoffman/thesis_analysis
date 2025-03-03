@@ -11,6 +11,6 @@ source /home/nhoffman/env/setup.sh
 source /home/nhoffman/.venv/bin/activate
 
 cd "$PWD"
-uv pip install .
+uv pip install --reinstall . 
 luigid --background --pidfile ./luigi.pid --logdir ./luigi.log &
 luigi --module thesis_analysis RunAll --global-parameters-username="nhoffman" --global-parameters-hostname="ernest.phys.cmu.edu" --workers=32
