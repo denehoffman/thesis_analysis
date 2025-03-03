@@ -45,16 +45,16 @@
       pyroot-env run-analysis 4
 
 
-@run-local WORKERS
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    [ -d .venv ] || uv venv
-    uv pip install -e .
-    luigid --background --pidfile ./luigi.pid --logdir ./luigi.log &
-    luigi --module thesis_analysis RunAll \
-        --global-parameters-username="nhoffman" \
-        --global-parameters-hostname="ernest.phys.cmu.edu" \
-        --workers="{{WORKERS}}"
+#@run-local WORKERS
+#    #!/usr/bin/env bash
+#    set -euxo pipefail
+#    [ -d .venv ] || uv venv
+#    uv pip install -e .
+#    luigid --background --pidfile ./luigi.pid --#logdir ./luigi.log &
+#    luigi --module thesis_analysis RunAll \
+#        --global-parameters-username="nhoffman" \
+#        --global-parameters-hostname="ernest.#phys.cmu.edu" \
+#        --workers="{{WORKERS}}"
 
 @open:
   python3 -m webbrowser "localhost:8082"
