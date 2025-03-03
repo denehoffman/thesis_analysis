@@ -10,44 +10,21 @@ from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import BinnedFitResult, UnbinnedFitResult, Waveset
 from thesis_analysis.tasks.binned_fit import BinnedFit
-from thesis_analysis.tasks.binned_plot import BinnedPlot
-from thesis_analysis.tasks.guided_plot import GuidedPlot
-from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
-from thesis_analysis.tasks.unbinned_plot import UnbinnedPlot
+from thesis_analysis.tasks.guided_fit import GuidedFit
 
 
-class BinnedAndUnbinnedPlot(luigi.Task):
+class GuidedPlot(luigi.Task):
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
-    guided = luigi.BoolParameter(default=False)
     averaged = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
             BinnedFit(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
-            UnbinnedFit(
-                self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
-                self.niters,
-                self.guided,
-                self.averaged,
-            ),
-            BinnedPlot(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
-            UnbinnedPlot(
-                self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
-                self.niters,
-                self.guided,
-                self.averaged,
-            ),
-            GuidedPlot(
+            GuidedFit(
                 self.chisqdof,
                 self.splot_method,
                 self.nsig,
@@ -61,7 +38,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}.png'
+                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}.png'
             ),
         ]
 
@@ -168,7 +145,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             unbinned_fit_hist.counts,
             unbinned_fit_hist.bins,
             color=colors.black,
-            label='Fit (unbinned)',
+            label='Fit (guided)',
             fill=True,
             alpha=0.2,
         )
@@ -176,7 +153,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             unbinned_s0p_hist.counts,
             unbinned_s0p_hist.bins,
             color=colors.red,
-            label='$S_0^+$ (unbinned)',
+            label='$S_0^+$ (guided)',
             fill=True,
             alpha=0.2,
         )
@@ -184,7 +161,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             unbinned_s0n_hist.counts,
             unbinned_s0n_hist.bins,
             color=colors.blue,
-            label='$S_0^-$ (unbinned)',
+            label='$S_0^-$ (guided)',
             fill=True,
             alpha=0.2,
         )
@@ -192,7 +169,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             unbinned_d2p_hist.counts,
             unbinned_d2p_hist.bins,
             color=colors.red,
-            label='$D_2^+$ (unbinned)',
+            label='$D_2^+$ (guided)',
             fill=True,
             alpha=0.2,
         )
