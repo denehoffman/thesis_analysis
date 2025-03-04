@@ -24,10 +24,18 @@ class BinnedAndUnbinnedPlot(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     guided = luigi.BoolParameter(default=False)
     averaged = luigi.BoolParameter(default=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
-            BinnedFit(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
+            BinnedFit(
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+                self.niters,
+                self.phase_factor,
+            ),
             UnbinnedFit(
                 self.chisqdof,
                 self.splot_method,
@@ -36,6 +44,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.niters,
                 self.guided,
                 self.averaged,
+                self.phase_factor,
             ),
             BinnedPlot(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
             UnbinnedPlot(
@@ -46,6 +55,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.niters,
                 self.guided,
                 self.averaged,
+                self.phase_factor,
             ),
             GuidedPlot(
                 self.chisqdof,
@@ -54,6 +64,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.nbkg,
                 self.niters,
                 self.averaged,
+                self.phase_factor,
             ),
         ]
 
@@ -61,7 +72,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}.png'
+                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}{"_phase_factor" if self.phase_factor else ""}.png'
             ),
         ]
 

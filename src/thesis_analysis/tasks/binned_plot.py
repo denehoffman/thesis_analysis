@@ -4,6 +4,7 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.paths import Paths
@@ -16,17 +17,26 @@ class BinnedPlot(luigi.Task):
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
+    niters = luigi.IntParameter(default=3, significant=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
-            BinnedFit(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
+            BinnedFit(
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+                self.niters,
+                self.phase_factor,
+            ),
         ]
 
     def output(self):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
+                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}.png'
             ),
         ]
 

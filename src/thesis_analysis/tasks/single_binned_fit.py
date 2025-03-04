@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 
 import luigi
+
 from thesis_analysis.constants import NBINS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
@@ -19,6 +20,7 @@ class SingleBinnedFit(luigi.Task):
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     resources = {'fit': 1}
 
@@ -43,7 +45,7 @@ class SingleBinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'binned_fit_{self.run_period}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.pkl'
+                / f'binned_fit_{self.run_period}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}.pkl'
             ),
         ]
 
@@ -56,7 +58,13 @@ class SingleBinnedFit(luigi.Task):
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
         niters = int(self.niters)  # type: ignore
+        phase_factor = bool(self.phase_factor)  # type: ignore
 
-        fit_result = fit_binned(analysis_path_set, nbins=NBINS, niters=niters)
+        fit_result = fit_binned(
+            analysis_path_set,
+            nbins=NBINS,
+            niters=niters,
+            phase_factor=phase_factor,
+        )
 
         pickle.dump(fit_result, output_fit_path.open('wb'))

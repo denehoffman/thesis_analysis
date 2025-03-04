@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 
 import luigi
+
 from thesis_analysis.constants import RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
@@ -22,6 +23,7 @@ class UnbinnedFit(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     guided = luigi.BoolParameter(default=False)
     averaged = luigi.BoolParameter(default=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     resources = {'fit': 1}
 
@@ -53,6 +55,7 @@ class UnbinnedFit(luigi.Task):
                     self.nbkg,
                     self.niters,
                     self.averaged,
+                    self.phase_factor,
                 )
             ]
         return reqs
@@ -61,7 +64,7 @@ class UnbinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}.pkl'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}{"_phase_factor" if self.phase_factor else ""}.pkl'
             ),
         ]
 
@@ -78,6 +81,7 @@ class UnbinnedFit(luigi.Task):
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
         niters = int(self.niters)  # type: ignore
+        phase_factor = bool(self.phase_factor)  # type: ignore
         p0 = None
         if self.guided:
             guided_result: UnbinnedFitResult = pickle.load(
@@ -85,6 +89,11 @@ class UnbinnedFit(luigi.Task):
             )
             p0 = guided_result.best_status.x
 
-        fit_result = fit_unbinned(analysis_path_set, p0=p0, niters=niters)
+        fit_result = fit_unbinned(
+            analysis_path_set,
+            p0=p0,
+            niters=niters,
+            phase_factor=phase_factor,
+        )
 
         pickle.dump(fit_result, output_fit_path.open('wb'))

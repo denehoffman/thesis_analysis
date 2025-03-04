@@ -69,6 +69,23 @@ class RunAll(luigi.WrapperTask):
                     nsig=2,
                     nbkg=2,
                     averaged=True,
+                    phase_factor=True,
+                ),
+                BinnedAndUnbinnedPlot(
+                    chisqdof=3.0,
+                    splot_method='B',
+                    nsig=2,
+                    nbkg=2,
+                    guided=True,
+                    averaged=True,
+                    phase_factor=True,
+                ),
+                GuidedPlot(
+                    chisqdof=3.0,
+                    splot_method='B',
+                    nsig=2,
+                    nbkg=2,
+                    averaged=True,
                 ),
                 BinnedAndUnbinnedPlot(
                     chisqdof=3.0, splot_method='B', nsig=2, nbkg=2

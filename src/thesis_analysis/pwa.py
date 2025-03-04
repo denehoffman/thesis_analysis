@@ -164,7 +164,7 @@ class AnalysisPathSet:
         return [self.accmc_s17, self.accmc_s18, self.accmc_f18, self.accmc_s20]
 
 
-def get_binned_model() -> ld.Model:
+def get_binned_model(*, phase_factor: bool = False) -> ld.Model:
     angles = ld.Angles(0, [1], [2], [2, 3])
     polarization = ld.Polarization(0, [1], 0)
     manager = ld.Manager()
@@ -176,15 +176,33 @@ def get_binned_model() -> ld.Model:
     d2p = manager.register(
         ld.ComplexScalar('d2p', ld.parameter('D2+ re'), ld.parameter('D2+ im'))
     )
-    pos_re = (s0p * z00p.real() + d2p * z22p.real()).norm_sqr()
-    pos_im = (s0p * z00p.imag() + d2p * z22p.imag()).norm_sqr()
-    neg_re = (s0n * z00n.real()).norm_sqr()
-    neg_im = (s0n * z00n.imag()).norm_sqr()
+    if phase_factor:
+        m_resonance = ld.Mass([2, 3])
+        m_1 = ld.Mass([2])
+        m_2 = ld.Mass([3])
+        m_recoil = ld.Mass([1])
+        s = ld.Mandelstam([0], [], [2, 3], [1], channel='s')
+        kappa = manager.register(
+            ld.PhaseSpaceFactor('kappa', m_recoil, m_1, m_2, m_resonance, s)
+        )
+        pos_re = (
+            s0p * kappa * z00p.real() + d2p * kappa * z22p.real()
+        ).norm_sqr()
+        pos_im = (
+            s0p * kappa * z00p.imag() + d2p * kappa * z22p.imag()
+        ).norm_sqr()
+        neg_re = (s0n * kappa * z00n.real()).norm_sqr()
+        neg_im = (s0n * kappa * z00n.imag()).norm_sqr()
+    else:
+        pos_re = (s0p * z00p.real() + d2p * z22p.real()).norm_sqr()
+        pos_im = (s0p * z00p.imag() + d2p * z22p.imag()).norm_sqr()
+        neg_re = (s0n * z00n.real()).norm_sqr()
+        neg_im = (s0n * z00n.imag()).norm_sqr()
     model = manager.model(pos_re + pos_im + neg_re + neg_im)
     return model
 
 
-def get_unbinned_model() -> ld.Model:
+def get_unbinned_model(*, phase_factor: bool = False) -> ld.Model:
     res_mass = ld.Mass([2, 3])
     angles = ld.Angles(0, [1], [2], [2, 3])
     polarization = ld.Polarization(0, [1], 0)
@@ -290,10 +308,32 @@ def get_unbinned_model() -> ld.Model:
             res_mass,
         )
     )
-    pos_re = (z00p.real() * (f0p + a0p) + z22p.real() * (f2 + a2)).norm_sqr()
-    pos_im = (z00p.imag() * (f0p + a0p) + z22p.imag() * (f2 + a2)).norm_sqr()
-    neg_re = (z00n.real() * (f0n + a0n)).norm_sqr()
-    neg_im = (z00n.imag() * (f0n + a0n)).norm_sqr()
+    if phase_factor:
+        m_resonance = ld.Mass([2, 3])
+        m_1 = ld.Mass([2])
+        m_2 = ld.Mass([3])
+        m_recoil = ld.Mass([1])
+        s = ld.Mandelstam([0], [], [2, 3], [1], channel='s')
+        kappa = manager.register(
+            ld.PhaseSpaceFactor('kappa', m_recoil, m_1, m_2, m_resonance, s)
+        )
+        pos_re = (
+            kappa * z00p.real() * (f0p + a0p) + kappa * z22p.real() * (f2 + a2)
+        ).norm_sqr()
+        pos_im = (
+            kappa * z00p.imag() * (f0p + a0p) + kappa * z22p.imag() * (f2 + a2)
+        ).norm_sqr()
+        neg_re = (kappa * z00n.real() * (f0n + a0n)).norm_sqr()
+        neg_im = (kappa * z00n.imag() * (f0n + a0n)).norm_sqr()
+    else:
+        pos_re = (
+            z00p.real() * (f0p + a0p) + z22p.real() * (f2 + a2)
+        ).norm_sqr()
+        pos_im = (
+            z00p.imag() * (f0p + a0p) + z22p.imag() * (f2 + a2)
+        ).norm_sqr()
+        neg_re = (z00n.real() * (f0n + a0n)).norm_sqr()
+        neg_im = (z00n.imag() * (f0n + a0n)).norm_sqr()
     model = manager.model(pos_re + pos_im + neg_re + neg_im)
     return model
 
@@ -439,13 +479,14 @@ def fit_unbinned(
     *,
     p0: np.ndarray | None = None,
     niters: int | None = None,
+    phase_factor: bool = False,
 ) -> UnbinnedFitResult:
     if p0 is not None:
         niters = 1
     if niters is None:
         niters = 1
     datasets = paths.get_datasets()
-    model = get_unbinned_model()
+    model = get_unbinned_model(phase_factor=phase_factor)
     nlls = [
         ld.NLL(model, ds_data, ds_accmc) for ds_data, ds_accmc in zip(*datasets)
     ]
@@ -498,10 +539,11 @@ def fit_binned(
     *,
     nbins: int,
     niters: int,
+    phase_factor: bool = False,
 ) -> BinnedFitResult:
     binned_datasets = paths.get_binned_datasets(bins=nbins, range=RANGE)
     results: list[BinnedFitResultBin] = []
-    model = get_binned_model()
+    model = get_binned_model(phase_factor=phase_factor)
     for ibin in range(nbins):
         nlls = [
             ld.NLL(model, ds_data[ibin], ds_accmc[ibin])
@@ -611,9 +653,10 @@ def fit_unbinned_guided(
     binned_result: BinnedFitResult | list[BinnedFitResult],
     *,
     niters: int,
+    phase_factor: bool = False,
 ) -> UnbinnedFitResult:
     datasets = paths.get_datasets()
-    model = get_unbinned_model()
+    model = get_unbinned_model(phase_factor=phase_factor)
     nlls = [
         ld.NLL(model, ds_data, ds_accmc) for ds_data, ds_accmc in zip(*datasets)
     ]
@@ -622,6 +665,7 @@ def fit_unbinned_guided(
     # We need every coherent combination and its constituents,
     # i.e. don't need the total here because it is |p|^2 + |n|^2
     # However, it seems to help with the absolute scale?
+    # TODO: we might need to weight the TOT more than the others
     wavesets = [Waveset.TOT, Waveset.P, Waveset.N, Waveset.S0P, Waveset.D2P]
     guided_manager = ld.LikelihoodManager()
     guided_terms = []

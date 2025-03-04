@@ -20,10 +20,18 @@ class GuidedPlot(luigi.Task):
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
     averaged = luigi.BoolParameter(default=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
-            BinnedFit(self.chisqdof, self.splot_method, self.nsig, self.nbkg),
+            BinnedFit(
+                self.chisqdof,
+                self.splot_method,
+                self.nsig,
+                self.nbkg,
+                self.niters,
+                self.phase_factor,
+            ),
             GuidedFit(
                 self.chisqdof,
                 self.splot_method,
@@ -31,6 +39,7 @@ class GuidedPlot(luigi.Task):
                 self.nbkg,
                 self.niters,
                 self.averaged,
+                self.phase_factor,
             ),
         ]
 
@@ -38,7 +47,7 @@ class GuidedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}.png'
+                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}{"_phase_factor" if self.phase_factor else ""}.png'
             ),
         ]
 

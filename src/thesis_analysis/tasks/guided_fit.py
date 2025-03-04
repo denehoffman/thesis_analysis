@@ -2,6 +2,7 @@ import pickle
 from pathlib import Path
 
 import luigi
+
 from thesis_analysis.constants import RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
@@ -22,6 +23,7 @@ class GuidedFit(luigi.Task):
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
     averaged = luigi.BoolParameter(default=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     resources = {'fit': 1}
 
@@ -47,7 +49,12 @@ class GuidedFit(luigi.Task):
         if self.averaged:
             reqs += [
                 BinnedFit(
-                    self.chisqdof, self.splot_method, self.nsig, self.nbkg
+                    self.chisqdof,
+                    self.splot_method,
+                    self.nsig,
+                    self.nbkg,
+                    self.niters,
+                    self.phase_factor,
                 )
             ]
         else:
@@ -67,7 +74,7 @@ class GuidedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}.pkl'
+                / f'guided_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_averaged" if self.averaged else ""}{"_phase_factor" if self.phase_factor else ""}.pkl'
             ),
         ]
 
@@ -99,9 +106,13 @@ class GuidedFit(luigi.Task):
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
         niters = int(self.niters)  # type: ignore
+        phase_factor = bool(self.phase_factor)  # type: ignore
 
         fit_result = fit_unbinned_guided(
-            analysis_path_set, binned_fit_result, niters=niters
+            analysis_path_set,
+            binned_fit_result,
+            niters=niters,
+            phase_factor=phase_factor,
         )
 
         pickle.dump(fit_result, output_fit_path.open('wb'))

@@ -4,6 +4,7 @@ from pathlib import Path
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.logger import logger
@@ -18,6 +19,8 @@ class PlotSingleBinned(luigi.Task):
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
+    niters = luigi.IntParameter(default=3, significant=False)
+    phase_factor = luigi.BoolParameter(default=False)
 
     def requires(self):
         return [
@@ -27,6 +30,8 @@ class PlotSingleBinned(luigi.Task):
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
+                self.niters,
+                self.phase_factor,
             ),
         ]
 
@@ -34,7 +39,7 @@ class PlotSingleBinned(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b_{self.run_period}.png'
+                / f'binned_fit_{self.run_period}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}.png'
             ),
         ]
 
