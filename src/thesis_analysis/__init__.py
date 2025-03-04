@@ -9,7 +9,6 @@ from thesis_analysis.tasks.guided_plot import GuidedPlot
 from thesis_analysis.tasks.mass_plot import MassPlot
 from thesis_analysis.tasks.rfl_plot import RFLPlot
 from thesis_analysis.tasks.splot_report import SPlotReport
-from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 
 
 class RunAll(luigi.WrapperTask):
@@ -53,7 +52,7 @@ class RunAll(luigi.WrapperTask):
                     chisqdof=3.0,
                     splot_method='D',
                     nsig=1,
-                    nbkg=3,
+                    nbkg=2,
                 ),
                 MassPlot(
                     'data',
@@ -61,9 +60,16 @@ class RunAll(luigi.WrapperTask):
                     chisqdof=3.0,
                     splot_method='D',
                     nsig=1,
-                    nbkg=3,
+                    nbkg=2,
                 ),
                 MakeAuxiliaryPlots(),
+                GuidedPlot(
+                    chisqdof=3.0,
+                    splot_method='B',
+                    nsig=2,
+                    nbkg=2,
+                    averaged=True,
+                ),
                 BinnedAndUnbinnedPlot(
                     chisqdof=3.0, splot_method='B', nsig=2, nbkg=2
                 ),
@@ -79,13 +85,6 @@ class RunAll(luigi.WrapperTask):
                     nsig=2,
                     nbkg=2,
                     guided=True,
-                ),
-                GuidedPlot(
-                    chisqdof=3.0,
-                    splot_method='B',
-                    nsig=2,
-                    nbkg=2,
-                    averaged=True,
                 ),
                 BinnedAndUnbinnedPlot(
                     chisqdof=3.0,
