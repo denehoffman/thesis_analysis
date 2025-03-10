@@ -5,16 +5,16 @@ description = "Thesis Analysis Code for N. Dene Hoffman"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "corner>=2.2.3",
-    "iminuit>=2.30.1",
-    "laddu>=0.2.3",
-    "luigi>=3.6.0",
-    "matplotlib>=3.10.0",
-    "numpy>=2.2.1",
-    "scipy>=1.15.1",
-    "scp>=0.15.0",
-    "setuptools>=75.8.0",
-    "uproot>=5.5.1",
+  "corner>=2.2.3",
+  "iminuit>=2.30.1",
+  "laddu>=0.2.3",
+  "luigi>=3.6.0",
+  "matplotlib>=3.10.0",
+  "numpy>=2.2.1",
+  "scipy>=1.15.1",
+  "scp>=0.15.0",
+  "setuptools>=75.8.0",
+  "uproot>=5.5.1",
 ]
 
 [project.scripts]
@@ -25,3 +25,12 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 thesis_analysis = ["*.mplstyle"]
+
+[tool.pyright]
+reportAny = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownMemberType = false
+reportMissingParameterType = false
+reportMissingTypeStubs = false
+reportUnusedCallResult = false

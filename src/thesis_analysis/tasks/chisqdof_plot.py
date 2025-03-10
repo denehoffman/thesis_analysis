@@ -1,8 +1,12 @@
+# pyright: reportUnnecessaryComparison=false
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+from typing_extensions import override
+
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
@@ -13,12 +17,11 @@ from thesis_analysis.constants import (
 )
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.accid_and_pol import AccidentalsAndPolarization
-
-# from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.data import GetData
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
+@final
 class ChiSqDOFPlot(luigi.Task):
     data_type = luigi.Parameter()
     bins = luigi.IntParameter()
@@ -28,6 +31,7 @@ class ChiSqDOFPlot(luigi.Task):
     nsig = luigi.OptionalIntParameter(None)
     nbkg = luigi.OptionalIntParameter(None)
 
+    @override
     def requires(self):
         if self.original:
             return [
@@ -39,10 +43,6 @@ class ChiSqDOFPlot(luigi.Task):
                 AccidentalsAndPolarization(self.data_type, run_period)
                 for run_period in RUN_PERIODS
             ]
-            # return [
-            #     ChiSqDOF(self.data_type, run_period, self.chisqdof)
-            #     for run_period in RUN_PERIODS
-            # ]
         elif (
             self.splot_method is not None
             and self.nsig is not None
@@ -62,6 +62,7 @@ class ChiSqDOFPlot(luigi.Task):
         else:
             raise Exception('Invalid requirements for mass plotting!')
 
+    @override
     def output(self):
         path = Paths.plots
         if self.original:
@@ -93,9 +94,13 @@ class ChiSqDOFPlot(luigi.Task):
         else:
             raise Exception('Invalid requirements for chisqdof plotting!')
 
+    @override
     def run(self):
         input_path = Path(self.input()[0][0].path)
         output_path = self.output()[0].path
+
+        bins = int(self.bins)  # pyright:ignore[reportArgumentType]
+        chisqdof = float(self.chisqdof)  # pyright:ignore[reportArgumentType]
 
         branches = [
             get_branch('ChiSqDOF'),
@@ -106,7 +111,7 @@ class ChiSqDOFPlot(luigi.Task):
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         max_range = (
-            float(self.chisqdof)  # type: ignore
+            chisqdof
             if (
                 self.splot_method is not None
                 and self.nsig is not None
@@ -118,7 +123,7 @@ class ChiSqDOFPlot(luigi.Task):
         ax.hist(
             data['ChiSqDOF'],
             weights=data['Weight'],
-            bins=int(self.bins),  # type: ignore
+            bins=bins,
             range=(0.0, max_range),
             color=colors.blue,
             label=DATA_TYPE_TO_LATEX[str(self.data_type)],
@@ -129,10 +134,10 @@ class ChiSqDOFPlot(luigi.Task):
             and self.nsig is None
             and self.nbkg is None
         ):
-            ax.axvline(float(self.chisqdof), color=colors.red, ls=':')  # type: ignore
+            ax.axvline(chisqdof, color=colors.red, ls=':')  # type: ignore
 
         ax.set_xlabel(BRANCH_NAME_TO_LATEX['ChiSqDOF'])
-        bin_width = 1.0 / int(self.bins)  # type: ignore
+        bin_width = 1.0 / bins
         ax.set_ylabel(f'Counts / {bin_width:.2f}')
         ax.legend()
         fig.savefig(output_path)

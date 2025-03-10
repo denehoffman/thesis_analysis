@@ -2,18 +2,23 @@ import pickle
 import sqlite3
 
 import luigi
+from typing_extensions import override
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.databases import GetDatabases
 from thesis_analysis.utils import CCDBData, ScalingFactors
 
 
 class CCDB(luigi.Task):
+    @override
     def requires(self):
         return [GetDatabases()]
 
+    @override
     def output(self):
         return [luigi.LocalTarget(Paths.databases / 'ccdb.pkl')]
 
+    @override
     def run(self):
         with sqlite3.connect(str(Paths.databases / 'ccdb.sqlite')) as ccdb:
             cursor = ccdb.cursor()

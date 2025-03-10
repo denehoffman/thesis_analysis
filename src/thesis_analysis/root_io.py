@@ -1,9 +1,10 @@
-from dataclasses import dataclass
+# pyright: basic
 from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
-from numpy.typing import DTypeLike
+
+from thesis_analysis.constants import RootBranch, RootBranchDict
 
 try:
     import ROOT
@@ -12,25 +13,17 @@ except Exception:
     pass
 
 
-@dataclass
-class RootBranch:
-    name: str
-    dtype: DTypeLike
-    dim: int = 1
-
-    def get_array(self):
-        return np.zeros(self.dim, dtype=self.dtype)
-
-
 def get_branches(
     in_path: str | Path,
     branches: list[RootBranch],
     *,
     tree: str = 'kin',
-) -> dict[str, np.ndarray]:
-    output = {branch.name: [] for branch in branches}
-    infile = ROOT.TFile.Open(str(in_path), 'READ')  # type: ignore
-    intree = ROOT.gDirectory.Get(tree)  # type: ignore
+) -> RootBranchDict:
+    data_dict: dict[str, list[np.generic]] = {
+        branch.name: [] for branch in branches
+    }
+    infile = ROOT.TFile.Open(str(in_path), 'READ')  # pyright:ignore
+    intree = ROOT.gDirectory.Get(tree)  # pyright:ignore
 
     branch_arrays = []
     for branch in branches:
@@ -41,10 +34,13 @@ def get_branches(
     for i in range(intree.GetEntries()):
         intree.GetEntry(i)
         for i, branch in enumerate(branch_arrays):
-            output[branches[i].name].append(branch[0])
+            data_dict[branches[i].name].append(branch[0])
 
     infile.Close()
-    return {key: np.array(value) for key, value in output.items()}
+    branch_dict: RootBranchDict = {
+        key: np.array(value) for key, value in data_dict.items()
+    }  # pyright:ignore[reportAssignmentType]
+    return branch_dict
 
 
 def process_root_tree(
@@ -56,10 +52,10 @@ def process_root_tree(
     tree: str = 'kin',
     **kwargs,
 ):
-    infile = ROOT.TFile.Open(str(in_path), 'READ')  # type: ignore
+    infile = ROOT.TFile.Open(str(in_path), 'READ')  # pyright:ignore
     intree = infile.Get(tree)
 
-    outfile = ROOT.TFile.Open(str(out_path), 'RECREATE')  # type: ignore
+    outfile = ROOT.TFile.Open(str(out_path), 'RECREATE')  # pyright:ignore
     outtree = intree.CloneTree(0)
 
     branch_arrays = []
@@ -89,10 +85,10 @@ def double_process_root_tree(
     tree: str = 'kin',
     **kwargs,
 ):
-    infile = ROOT.TFile.Open(str(in_path), 'READ')  # type: ignore
+    infile = ROOT.TFile.Open(str(in_path), 'READ')  # pyright:ignore
     intree = infile.Get(tree)
 
-    outfile = ROOT.TFile.Open(str(out_path), 'RECREATE')  # type: ignore
+    outfile = ROOT.TFile.Open(str(out_path), 'RECREATE')  # pyright:ignore
     outtree = intree.CloneTree(0)
 
     branch_arrays = []

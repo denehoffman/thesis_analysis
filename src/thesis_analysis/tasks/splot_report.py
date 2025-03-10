@@ -1,8 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis.constants import SPLOT_METHODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import SPlotFitFailure
@@ -10,12 +13,16 @@ from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
 
 
+@final
 class SPlotReport(luigi.Task):
     chisqdof = luigi.FloatParameter()
     nsig_max = luigi.IntParameter()
     nbkg_max = luigi.IntParameter()
 
+    @override
     def requires(self):
+        nsig_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
+        nbkg_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
         return [
             SPlotFit(
                 'data',
@@ -25,8 +32,8 @@ class SPlotReport(luigi.Task):
                 nbkg,
             )
             for splot_method in SPLOT_METHODS
-            for nsig in range(1, int(self.nsig_max) + 1)  # type: ignore
-            for nbkg in range(1, int(self.nbkg_max) + 1)  # type: ignore
+            for nsig in range(1, nsig_max + 1)
+            for nbkg in range(1, nbkg_max + 1)
         ] + [
             SPlotPlot(
                 'data',
@@ -36,10 +43,11 @@ class SPlotReport(luigi.Task):
                 nbkg,
             )
             for splot_method in SPLOT_METHODS
-            for nsig in range(1, int(self.nsig_max) + 1)  # type: ignore
-            for nbkg in range(1, int(self.nbkg_max) + 1)  # type: ignore
+            for nsig in range(1, nsig_max + 1)  # type: ignore
+            for nbkg in range(1, nbkg_max + 1)  # type: ignore
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -47,24 +55,23 @@ class SPlotReport(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
+        nsig_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
+        nbkg_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
         fit_results = {
             method: {
                 nsig: {
                     nbkg: pickle.load(
                         Path(
                             self.input()[
-                                i
-                                * int(self.nsig_max)  # type: ignore
-                                * int(self.nbkg_max)  # type: ignore
-                                + j * int(self.nbkg_max)  # type: ignore
-                                + k
+                                i * nsig_max * nbkg_max + j * nbkg_max + k
                             ][0].path
                         ).open('rb')
                     )
-                    for k, nbkg in enumerate(range(1, int(self.nbkg_max) + 1))  # type: ignore
+                    for k, nbkg in enumerate(range(1, nbkg_max + 1))
                 }
-                for j, nsig in enumerate(range(1, int(self.nsig_max) + 1))  # type: ignore
+                for j, nsig in enumerate(range(1, nsig_max + 1))
             }
             for i, method in enumerate(SPLOT_METHODS)
         }
@@ -82,8 +89,8 @@ class SPlotReport(luigi.Task):
         min_bic = np.inf
         min_bic_non_factorizing = np.inf
         for method in SPLOT_METHODS:
-            for nsig in range(1, int(self.nsig_max) + 1):  # type: ignore
-                for nbkg in range(1, int(self.nbkg_max) + 1):  # type: ignore
+            for nsig in range(1, nsig_max + 1):
+                for nbkg in range(1, nbkg_max + 1):
                     fit_result = fit_results[method][nsig][nbkg]
                     if isinstance(fit_result, SPlotFitFailure):
                         continue
@@ -98,8 +105,8 @@ class SPlotReport(luigi.Task):
                             min_bic_non_factorizing = fit_result.bic
         current_method = ''
         for method in SPLOT_METHODS:
-            for nsig in range(1, int(self.nsig_max) + 1):  # type: ignore
-                for nbkg in range(1, int(self.nbkg_max) + 1):  # type: ignore
+            for nsig in range(1, nsig_max + 1):
+                for nbkg in range(1, nbkg_max + 1):
                     if method == current_method:
                         method_string = ''
                     else:
@@ -135,15 +142,12 @@ class SPlotReport(luigi.Task):
                     else:
                         out_text += r'\textemdash & \textemdash'
                     if (
-                        nsig == int(self.nsig_max)  # type: ignore
-                        and nbkg == int(self.nbkg_max)  # type: ignore
+                        nsig == nsig_max
+                        and nbkg == nbkg_max
                         and method == SPLOT_METHODS[-1]
                     ):
                         out_text += '\\\\\\bottomrule\n'
-                    elif (
-                        nsig == int(self.nsig_max)  # type: ignore
-                        and nbkg == int(self.nbkg_max)  # type: ignore
-                    ):
+                    elif nsig == nsig_max and nbkg == nbkg_max:
                         out_text += '\\\\\\midrule\n'
                     else:
                         out_text += '\\\\\n'

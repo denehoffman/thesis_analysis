@@ -1,9 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+from typing_extensions import override
 
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
@@ -13,6 +15,7 @@ from thesis_analysis.tasks.binned_fit import BinnedFit
 from thesis_analysis.tasks.guided_fit import GuidedFit
 
 
+@final
 class GuidedPlot(luigi.Task):
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -22,6 +25,7 @@ class GuidedPlot(luigi.Task):
     averaged = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
 
+    @override
     def requires(self):
         return [
             BinnedFit(
@@ -43,6 +47,7 @@ class GuidedPlot(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -51,6 +56,7 @@ class GuidedPlot(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         binned_fit_path = Path(str(self.input()[0][0]))
         unbinned_fit_path = Path(str(self.input()[1][0]))

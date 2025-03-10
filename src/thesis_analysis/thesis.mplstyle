@@ -27,7 +27,7 @@ ytick.direction: in
 ytick.minor.visible: True
 # Legend
 # legend.fancybox: False
-legend.frameon: False
+legend.frameon: True
 legend.fontsize: 8
 # Figure
 figure.autolayout: True

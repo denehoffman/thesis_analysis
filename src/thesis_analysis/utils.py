@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from iminuit import Minuit
+from numpy.typing import NDArray
 
 
 @dataclass
@@ -21,7 +22,9 @@ class CCDBData:
             ScalingFactors,
         ],
     ):
-        self.accidental_scaling_factors = accidental_scaling_factors
+        self.accidental_scaling_factors: dict[int, ScalingFactors] = (
+            accidental_scaling_factors
+        )
 
     def get_scaling(
         self,
@@ -64,8 +67,8 @@ class CCDBData:
 
 @dataclass
 class Histogram:
-    counts: np.ndarray
-    bins: np.ndarray
+    counts: NDArray[np.floating]
+    bins: NDArray[np.floating]
 
 
 class RCDBData:
@@ -74,8 +77,8 @@ class RCDBData:
         pol_angles: dict[int, tuple[str, str, float | None]],
         pol_magnitudes: dict[str, dict[str, Histogram]],
     ):
-        self.pol_angles = pol_angles
-        self.pol_magnitudes = pol_magnitudes
+        self.pol_angles: dict[int, tuple[str, str, float | None]] = pol_angles
+        self.pol_magnitudes: dict[str, dict[str, Histogram]] = pol_magnitudes
 
     def get_eps_xy(
         self,
@@ -92,7 +95,7 @@ class RCDBData:
         energy_index = np.digitize(beam_energy, pol_hist.bins)
         if energy_index >= len(pol_hist.counts):
             return (np.nan, np.nan, False)
-        magnitude = pol_hist.counts[energy_index]
+        magnitude: float = pol_hist.counts[energy_index]
         return magnitude * np.cos(angle), magnitude * np.sin(angle), True
 
 

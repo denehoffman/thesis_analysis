@@ -1,8 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     NSIG_BINS_DE,
@@ -19,6 +22,7 @@ from thesis_analysis.splot import (
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
 
+@final
 class SPlotFit(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
@@ -26,6 +30,7 @@ class SPlotFit(luigi.Task):
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(data_type, run_period, self.chisqdof)
@@ -33,6 +38,7 @@ class SPlotFit(luigi.Task):
             for data_type in [self.data_type, 'accmc', 'bkgmc']
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -41,6 +47,7 @@ class SPlotFit(luigi.Task):
             )
         ]
 
+    @override
     def run(self):
         input_data_paths = [
             Path(self.input()[3 * i + 0][0].path)
@@ -57,8 +64,8 @@ class SPlotFit(luigi.Task):
         output_path = Path(self.output()[0].path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        nsig = int(self.nsig)  # type: ignore
-        nbkg = int(self.nbkg)  # type: ignore
+        nsig = int(self.nsig)  # pyright:ignore[reportArgumentType]
+        nbkg = int(self.nbkg)  # pyright:ignore[reportArgumentType]
 
         data_dfs = {
             i: root_io.get_branches(
@@ -155,8 +162,8 @@ class SPlotFit(luigi.Task):
                     bkgmc_df['Weight'],
                     nsig=nsig,
                     nbkg=nbkg,
-                    fixed_sig=self.splot_method != 'A',
-                    fixed_bkg=self.splot_method == 'C',
+                    fixed_sig=str(self.splot_method) != 'A',
+                    fixed_bkg=str(self.splot_method) == 'C',
                 )
             else:
                 fit_result = run_splot_fit_d(
@@ -174,9 +181,9 @@ class SPlotFit(luigi.Task):
                     nsig=nsig,
                     nsig_bins=NSIG_BINS_DE,
                     nbkg=nbkg,
-                    fixed_bkg=self.splot_method == 'E',
+                    fixed_bkg=str(self.splot_method) == 'E',
                 )
-        except:
+        except Exception:
             fit_result = SPlotFitFailure()
 
         pickle.dump(fit_result, output_path.open('wb'))

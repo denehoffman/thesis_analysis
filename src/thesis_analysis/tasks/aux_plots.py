@@ -2,17 +2,17 @@ import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
-from scipy.integrate import quad
+from numpy.typing import NDArray
+from scipy.integrate import quad  # pyright:ignore[reportUnknownVariableType]
 from scipy.special import sph_harm
+from typing_extensions import override
 
-from thesis_analysis.paths import Paths
 from thesis_analysis import colors
+from thesis_analysis.paths import Paths
 
 
 class MakeAuxiliaryPlots(luigi.Task):
-    def requires(self):
-        return []
-
+    @override
     def output(self):
         return [
             luigi.LocalTarget(Paths.plots / 'argand_diagram.png'),
@@ -20,6 +20,7 @@ class MakeAuxiliaryPlots(luigi.Task):
             luigi.LocalTarget(Paths.plots / 'chew_mandelstam.png'),
         ]
 
+    @override
     def run(self):
         argand_path = self.output()[0].path
         spherical_harmonics_path = self.output()[1].path
@@ -121,14 +122,21 @@ class MakeAuxiliaryPlots(luigi.Task):
             zs = np.array([int_ylm_abs_square(*lm, x) for x in xs])
             ax.plot(xs, ys, zs, color=cols[i])
             ax.fill_between(
-                xs, ys, zs, xs, ys, np.zeros_like(zs), alpha=0.2, color=cols[i]
+                xs,
+                ys,
+                zs,
+                xs,  # pyright:ignore[reportArgumentType]
+                ys,  # pyright:ignore[reportArgumentType]
+                np.zeros_like(zs),  # pyright:ignore[reportArgumentType]
+                alpha=0.2,
+                color=cols[i],
             )
         ax.set_yticks([0, 1, 2, 3])
         ax.set_yticklabels(ylabels)
         ax.set_xlabel(r'$\cos\theta$')
-        ax.set_zlabel(r'$|Y_\ell^m|^2$')
-        ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-        ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax.set_zlabel(r'$|Y_\ell^m|^2$')  # pyright:ignore[reportAttributeAccessIssue]
+        ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # pyright:ignore[reportAttributeAccessIssue]
+        ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))  # pyright:ignore[reportAttributeAccessIssue]
         ax.grid(False)
         plt.savefig(spherical_harmonics_path)
 
@@ -206,13 +214,17 @@ class MakeAuxiliaryPlots(luigi.Task):
         plt.savefig(chew_mandelstam_path)
 
 
-def eval_t_k(s: complex, m_a: np.ndarray, gamma_a: np.ndarray) -> complex:
+def eval_t_k(
+    s: complex, m_a: NDArray[np.float64], gamma_a: NDArray[np.float64]
+) -> complex:
     g_a = np.sqrt(gamma_a / m_a)
     k = float(np.sum(np.power(g_a, 2) / (np.power(m_a, 2) - s)))
     return k / (1 - 1j * k)
 
 
-def eval_t_bw(s: complex, m_a: np.ndarray, gamma_a: np.ndarray) -> complex:
+def eval_t_bw(
+    s: complex, m_a: NDArray[np.float64], gamma_a: NDArray[np.float64]
+) -> complex:
     bw_a = (m_a * gamma_a) / (np.power(m_a, 2) - s - 1j * m_a * gamma_a)
     return np.sum(bw_a, dtype=complex)
 
@@ -229,7 +241,7 @@ def int_ylm_abs_square(ell: int, m: int, costheta: float) -> float:
     def f(x: float) -> float:
         return ylm_abs_square(ell, m, costheta, x)
 
-    return quad(f, 0, 2 * np.pi)[0]
+    return quad(f, 0, 2 * np.pi)[0]  # pyright:ignore[reportUnknownVariableType]
 
 
 def chi_plus(s: complex, m1: float, m2: float) -> complex:
@@ -240,12 +252,12 @@ def chi_minus(s: complex, m1: float, m2: float) -> complex:
     return 1 - (m1 - m2) ** 2 / (s + 1j * np.finfo(float).tiny)
 
 
-@np.vectorize(excluded=['m1', 'm2'], otypes=[complex])
+@np.vectorize(excluded=['m1', 'm2'], otypes=[complex])  # pyright:ignore[reportCallIssue]
 def rho(s: complex, m1: float, m2: float) -> complex:
     return np.sqrt(chi_plus(s, m1, m2) * chi_minus(s, m1, m2))
 
 
-@np.vectorize(excluded=['m1', 'm2'], otypes=[complex])
+@np.vectorize(excluded=['m1', 'm2'], otypes=[complex])  # pyright:ignore[reportCallIssue]
 def chew_mandelstam(s: complex, m1: float, m2: float) -> complex:
     return (
         rho(s, m1, m2)

@@ -3,21 +3,26 @@ import sqlite3
 
 import luigi
 import uproot
+from typing_extensions import override
+from uproot.behaviors.TBranch import HasBranches
+
 from thesis_analysis.constants import get_pol_angle, get_run_period
 from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.databases import GetDatabases
 from thesis_analysis.utils import Histogram, RCDBData
-from uproot.behaviors.TBranch import HasBranches
 
 
 class RCDB(luigi.Task):
+    @override
     def requires(self):
         return [GetDatabases()]
 
+    @override
     def output(self):
         return [luigi.LocalTarget(Paths.databases / 'rcdb.pkl')]
 
+    @override
     def run(self):
         angles = {}
         with sqlite3.connect(str(Paths.databases / 'rcdb.sqlite')) as rcdb:
@@ -51,13 +56,13 @@ class RCDB(luigi.Task):
         }
         for rp, hist_path in pol_hists.items():
             hists = {}
-            tfile = uproot.open(hist_path)
+            tfile = uproot.open(hist_path)  # pyright:ignore[reportUnknownVariableType]
             for pol in ['0', '45', '90', '135']:
-                hist = tfile[f'hPol{pol}']
+                hist = tfile[f'hPol{pol}']  # pyright:ignore[reportUnknownVariableType]
                 if isinstance(hist, HasBranches | uproot.ReadOnlyDirectory):
                     logger.error(f'Error reading histograms from {hist_path}')
                     raise IOError(f'Error reading histograms from {hist_path}')
-                mags, edges = hist.to_numpy()
+                mags, edges = hist.to_numpy()  # pyright:ignore[reportUnknownVariableType]
                 hists[pol] = Histogram(mags, edges)
             magnitudes[rp] = hists
         pickle.dump(

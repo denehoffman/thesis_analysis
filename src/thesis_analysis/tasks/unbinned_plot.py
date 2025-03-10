@@ -1,9 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+from typing_extensions import override
 
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
@@ -12,6 +14,7 @@ from thesis_analysis.pwa import UnbinnedFitResult, Waveset
 from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 
 
+@final
 class UnbinnedPlot(luigi.Task):
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -22,6 +25,7 @@ class UnbinnedPlot(luigi.Task):
     averaged = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
 
+    @override
     def requires(self):
         return [
             UnbinnedFit(
@@ -36,6 +40,7 @@ class UnbinnedPlot(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -44,6 +49,7 @@ class UnbinnedPlot(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         unbinned_fit_path = Path(str(self.input()[0][0]))
 

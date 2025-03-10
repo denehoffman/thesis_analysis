@@ -1,8 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     RUN_PERIODS,
@@ -17,17 +20,20 @@ from thesis_analysis.splot import (
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
 
+@final
 class FactorizationFit(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
     n_quantiles = luigi.IntParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(self.data_type, run_period, self.chisqdof)
             for run_period in RUN_PERIODS
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -36,6 +42,7 @@ class FactorizationFit(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         input_data_paths = [
             Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
@@ -43,7 +50,7 @@ class FactorizationFit(luigi.Task):
         output_fit_path = Path(self.output()[0].path)
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
-        n_quantiles = int(self.n_quantiles)  # type: ignore
+        n_quantiles = int(self.n_quantiles)  # pyright:ignore[reportArgumentType]
         data_dfs = {
             i: root_io.get_branches(
                 input_data_paths[i],

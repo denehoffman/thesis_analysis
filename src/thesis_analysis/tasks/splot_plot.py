@@ -1,10 +1,13 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -23,6 +26,7 @@ from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_fit import SPlotFit
 
 
+@final
 class SPlotPlot(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
@@ -30,6 +34,7 @@ class SPlotPlot(luigi.Task):
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(self.data_type, run_period, self.chisqdof)
@@ -44,6 +49,7 @@ class SPlotPlot(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -52,6 +58,7 @@ class SPlotPlot(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         input_paths = [
             Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))

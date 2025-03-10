@@ -1,7 +1,10 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
+from typing_extensions import override
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     FactorizationFitResult,
@@ -10,14 +13,17 @@ from thesis_analysis.tasks.factorization_fit import FactorizationFit
 from thesis_analysis.tasks.factorization_plot import FactorizationPlot
 
 
+@final
 class FactorizationReport(luigi.Task):
     chisqdof = luigi.FloatParameter()
     max_quantiles = luigi.IntParameter()
 
+    @override
     def requires(self):
+        max_quantiles = int(self.max_quantiles)  # pyright:ignore[reportArgumentType]
         return [
             FactorizationFit(data_type, self.chisqdof, n_quantiles)
-            for n_quantiles in range(2, int(self.max_quantiles) + 1)  # type: ignore
+            for n_quantiles in range(2, max_quantiles + 1)  # type: ignore
             for data_type in ['data', 'accmc', 'bkgmc']
         ] + [
             FactorizationPlot(
@@ -25,10 +31,11 @@ class FactorizationReport(luigi.Task):
                 chisqdof=self.chisqdof,
                 n_quantiles=n_quantiles,
             )
-            for n_quantiles in range(2, int(self.max_quantiles) + 1)  # type: ignore
+            for n_quantiles in range(2, max_quantiles + 1)  # type: ignore
             for data_type in ['data', 'accmc', 'bkgmc']
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -37,9 +44,10 @@ class FactorizationReport(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
-        n_quantiles = int(self.max_quantiles) - 1  # type: ignore
-        max_quantiles = int(self.max_quantiles)  # type: ignore
+        max_quantiles = int(self.max_quantiles)  # pyright:ignore[reportArgumentType]
+        n_quantiles = max_quantiles - 1
         input_fits = {
             j: {
                 data_type: pickle.load(

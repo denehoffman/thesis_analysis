@@ -1,9 +1,12 @@
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -16,16 +19,19 @@ from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
 
+@final
 class RFLPlot(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(self.data_type, run_period, self.chisqdof)
             for run_period in RUN_PERIODS
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -34,6 +40,7 @@ class RFLPlot(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         input_paths = [
             Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
@@ -83,6 +90,5 @@ class RFLPlot(luigi.Task):
             f'Counts / {bin_width:.3f} {BRANCH_NAME_TO_LATEX_UNITS["RFL1"]}'
         )
         ax.legend()
-        ax.set_yscale('log')
         fig.savefig(output_plot_path)
         plt.close()

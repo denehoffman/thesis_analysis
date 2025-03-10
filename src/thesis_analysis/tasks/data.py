@@ -1,8 +1,13 @@
+from typing import final
+
 import luigi
+from typing_extensions import override
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.scp import SCP
 
 
+@final
 class GetData(luigi.Task):
     data_type = luigi.Parameter()
     run_period = luigi.Parameter()
@@ -42,6 +47,7 @@ class GetData(luigi.Task):
             getattr(Paths, str(self.data_type)) / f'{self.run_period}.root'
         )
 
+    @override
     def requires(self):
         return [
             SCP(
@@ -50,5 +56,6 @@ class GetData(luigi.Task):
             )
         ]
 
+    @override
     def output(self):
         return [luigi.LocalTarget(self.local_path)]

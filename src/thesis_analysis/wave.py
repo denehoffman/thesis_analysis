@@ -46,11 +46,11 @@ class Wave:
 
     @property
     def amplitude_name(self) -> str:
-        return f"z{self.l}{'+' if self.m >= 0 else '-'}{abs(self.m)}{self.r}"
+        return f'z{self.l}{"+" if self.m >= 0 else "-"}{abs(self.m)}{self.r}'
 
     @property
     def coefficient_name(self) -> str:
-        return f"c{self.l}{'+' if self.m >= 0 else '-'}{abs(self.m)}{self.r}"
+        return f'c{self.l}{"+" if self.m >= 0 else "-"}{abs(self.m)}{self.r}'
 
     @property
     def letter(self) -> str:
@@ -68,21 +68,21 @@ class Wave:
 
     @property
     def latex(self) -> str:
-        return f"${self.letter}_{{{'+' if self.m >= 0 else '-'}{abs(self.m)}}}^{{({self.r})}}$"
+        return f'${self.letter}_{{{"+" if self.m >= 0 else "-"}{abs(self.m)}}}^{{({self.r})}}$'
 
     @property
     def latex_group(self) -> str:
-        return f"${self.letter}_{{{'+' if self.m >= 0 else '-'}{abs(self.m)}}}$"
+        return f'${self.letter}_{{{"+" if self.m >= 0 else "-"}{abs(self.m)}}}$'
 
     @property
     def amplitude(self) -> ld.amplitudes.Amplitude:
         angles = ld.Angles(0, [1], [2], [2, 3])
-        polarization = ld.Polarization(0, [1])
-        return ld.Zlm(
+        polarization = ld.Polarization(0, [1], 0)
+        return ld.Zlm(  # pyright:ignore[reportCallIssue, reportUnknownVariableType]
             self.amplitude_name,
-            self.l,  # type: ignore
-            self.m,  # type: ignore
-            self.r,  # type: ignore
+            self.l,  # pyright:ignore[reportArgumentType]
+            self.m,  # pyright:ignore[reportArgumentType]
+            self.r,  # pyright:ignore[reportArgumentType]
             angles,
             polarization,
         )

@@ -1,12 +1,12 @@
 import sys as _sys
 
-from loguru import _defaults, logger
+from loguru import Record, logger
 
 __all__ = ['logger']
 
 
-def formatter(record) -> str:  # noqa: PLR0911
-    level = record['level'].name
+def formatter(record: Record) -> str:
+    level: str = record['level'].name
     if level == 'TRACE':
         return '\x1b[30;47;1m TRACE    \x1b[0m {time:YYYY-MM-DDTHH::mm:ss.SSSS!UTC} - {message}\n{exception}'
     if level == 'DEBUG':
@@ -21,7 +21,10 @@ def formatter(record) -> str:  # noqa: PLR0911
         return '\x1b[30;45;1m ERROR    \x1b[0m {time:YYYY-MM-DDTHH::mm:ss.SSSS!UTC} - {message}\n{exception}'
     if level == 'CRITICAL':
         return '\x1b[30;41;1m CRITICAL \x1b[0m {time:YYYY-MM-DDTHH::mm:ss.SSSS!UTC} - {message}\n{exception}'
-    return str(_defaults.LOGURU_FORMAT)
+    return (
+        f' {level: <10} '
+        + '{time:YYYY-MM-DDTHH::mm:ss.SSSS!UTC} - {message}\n{exception}'
+    )
 
 
 logger.remove()

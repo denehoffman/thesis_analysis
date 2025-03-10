@@ -1,8 +1,12 @@
+# pyright: reportUnnecessaryComparison=false
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+from typing_extensions import override
+
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
@@ -19,6 +23,7 @@ from thesis_analysis.tasks.data import GetData
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
+@final
 class MassPlot(luigi.Task):
     data_type = luigi.Parameter()
     bins = luigi.IntParameter()
@@ -28,6 +33,7 @@ class MassPlot(luigi.Task):
     nsig = luigi.OptionalIntParameter(None)
     nbkg = luigi.OptionalIntParameter(None)
 
+    @override
     def requires(self):
         if self.original:
             return [
@@ -63,6 +69,7 @@ class MassPlot(luigi.Task):
         else:
             raise Exception('Invalid requirements for mass plotting!')
 
+    @override
     def output(self):
         path = Paths.plots
         if self.original:
@@ -92,9 +99,12 @@ class MassPlot(luigi.Task):
         else:
             raise Exception('Invalid requirements for mass plotting!')
 
+    @override
     def run(self):
         input_path = Path(self.input()[0][0].path)
         output_path = self.output()[0].path
+
+        bins = int(self.bins)  # pyright:ignore[reportArgumentType]
 
         branches = [
             get_branch('M_Resonance'),
@@ -107,7 +117,7 @@ class MassPlot(luigi.Task):
         ax.hist(
             data['M_Resonance'],
             weights=data['Weight'],
-            bins=int(self.bins),  # type: ignore
+            bins=bins,
             range=(1.0, 2.0),
             color=colors.blue,
             label=DATA_TYPE_TO_LATEX[str(self.data_type)],
@@ -115,7 +125,7 @@ class MassPlot(luigi.Task):
         ax.set_xlabel(
             f'{BRANCH_NAME_TO_LATEX["M_Resonance"]} ({BRANCH_NAME_TO_LATEX_UNITS["M_Resonance"]})'
         )
-        bin_width_mev = int(1000 / int(self.bins))  # type: ignore
+        bin_width_mev = int(1000 / bins)
         ax.set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
         ax.legend()
         fig.savefig(output_path)

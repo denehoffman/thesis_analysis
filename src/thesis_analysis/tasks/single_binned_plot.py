@@ -1,9 +1,11 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+from typing_extensions import override
 
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
@@ -13,6 +15,7 @@ from thesis_analysis.pwa import BinnedFitResult, Waveset
 from thesis_analysis.tasks.single_binned_fit import SingleBinnedFit
 
 
+@final
 class PlotSingleBinned(luigi.Task):
     run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
@@ -22,6 +25,7 @@ class PlotSingleBinned(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     phase_factor = luigi.BoolParameter(default=False)
 
+    @override
     def requires(self):
         return [
             SingleBinnedFit(
@@ -35,6 +39,7 @@ class PlotSingleBinned(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -43,6 +48,7 @@ class PlotSingleBinned(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         binned_fit_path = Path(str(self.input()[0][0]))
 

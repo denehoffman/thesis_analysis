@@ -1,8 +1,12 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
+import numpy as np
 from numpy.typing import NDArray
+from typing_extensions import override
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.splot import get_sweights
@@ -11,6 +15,7 @@ from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
 
 
+@final
 class SPlotWeights(luigi.Task):
     data_type = luigi.Parameter()
     run_period = luigi.Parameter()
@@ -19,6 +24,7 @@ class SPlotWeights(luigi.Task):
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
@@ -38,6 +44,7 @@ class SPlotWeights(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         input_path = Path(self.input()[0][0].path)
         return [
@@ -47,11 +54,15 @@ class SPlotWeights(luigi.Task):
             )
         ]
 
+    @override
     def run(self):
         input_path = Path(self.input()[0][0].path)
         input_fit_path = Path(self.input()[1][0].path)
         output_path = Path(self.output()[0].path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        nsig = int(self.nsig)  # pyright:ignore[reportArgumentType]
+        nbkg = int(self.nbkg)  # pyright:ignore[reportArgumentType]
 
         data_df = root_io.get_branches(
             input_path,
@@ -63,8 +74,8 @@ class SPlotWeights(luigi.Task):
             data_df['RFL1'],
             data_df['RFL2'],
             data_df['Weight'],
-            nsig=self.nsig,  # type: ignore
-            nbkg=self.nbkg,  # type: ignore
+            nsig=nsig,
+            nbkg=nbkg,
         )
 
         branches = [
@@ -73,7 +84,7 @@ class SPlotWeights(luigi.Task):
 
         def process(
             i: int,
-            weight: NDArray,
+            weight: NDArray[np.float32],
         ) -> bool:
             weight[0] = weights[i]
             return weight[0] != 0.0

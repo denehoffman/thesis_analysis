@@ -1,10 +1,12 @@
 import luigi
+from typing_extensions import override
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.scp import SCP
 
 
 class GetDatabases(luigi.Task):
-    path_map = [
+    path_map: list[tuple[str, str]] = [
         (
             '/home/gluex2/gluexdb/ccdb_2024_05_08.sqlite',
             str(Paths.databases / 'ccdb.sqlite'),
@@ -31,6 +33,7 @@ class GetDatabases(luigi.Task):
         ),
     ]
 
+    @override
     def requires(self):
         return [
             SCP(
@@ -40,6 +43,7 @@ class GetDatabases(luigi.Task):
             for remote_path, local_path in self.path_map
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(local_path) for _, local_path in self.path_map

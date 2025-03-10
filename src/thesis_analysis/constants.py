@@ -1,8 +1,9 @@
+from dataclasses import dataclass
+from typing import TypedDict
+
 import luigi
 import numpy as np
-from numpy.typing import DTypeLike
-
-from thesis_analysis.root_io import RootBranch
+from numpy.typing import DTypeLike, NDArray
 
 RUN_PERIODS = ['s17', 's18', 'f18', 's20']
 RUN_PERIOD_LABELS = ['Spring 2017', 'Spring 2018', 'Fall 2018', 'Spring 2020']
@@ -62,8 +63,128 @@ def get_pol_angle(run_period: str | None, angle_deg: str) -> float | None:
 
 
 class global_parameters(luigi.Config):
-    username = luigi.Parameter()
-    hostname = luigi.Parameter('ernest.phys.cmu.edu')
+    username: luigi.Parameter = luigi.Parameter()
+    hostname: luigi.Parameter = luigi.Parameter('ernest.phys.cmu.edu')
+
+
+@dataclass
+class RootBranch:
+    name: str
+    dtype: DTypeLike
+    dim: int = 1
+
+    def get_array(self):
+        return np.zeros(self.dim, dtype=self.dtype)
+
+
+class RootBranchDict(TypedDict):
+    RunNumber: NDArray[np.uint32]
+    EventNumber: NDArray[np.ulonglong]
+    ComboNumber: NDArray[np.uint32]
+    Weight: NDArray[np.float32]
+    E_Beam: NDArray[np.float32]
+    Px_Beam: NDArray[np.float32]
+    Py_Beam: NDArray[np.float32]
+    Pz_Beam: NDArray[np.float32]
+    NumFinalState: NDArray[np.int32]
+    E_FinalState: NDArray[np.float32]
+    Px_FinalState: NDArray[np.float32]
+    Py_FinalState: NDArray[np.float32]
+    Pz_FinalState: NDArray[np.float32]
+    HX_CosTheta: NDArray[np.float32]
+    HX_Phi: NDArray[np.float32]
+    t_meson: NDArray[np.float32]
+    t_baryon: NDArray[np.float32]
+    t_baryon2: NDArray[np.float32]
+    RFL1: NDArray[np.float32]
+    RFL2: NDArray[np.float32]
+    FS1: NDArray[np.float32]
+    FS2: NDArray[np.float32]
+    M_Resonance: NDArray[np.float32]
+    M_PPiP1: NDArray[np.float32]
+    M_PPiP2: NDArray[np.float32]
+    M_PPiM1: NDArray[np.float32]
+    M_PPiM2: NDArray[np.float32]
+    LogConf: NDArray[np.float32]
+    ChiSqDOF: NDArray[np.float32]
+    RF: NDArray[np.float32]
+    Proton_P: NDArray[np.float32]
+    Proton_Theta: NDArray[np.float32]
+    Proton_dEdx_CDC: NDArray[np.float32]
+    Proton_dEdx_CDC_integral: NDArray[np.float32]
+    Proton_dEdx_FDC: NDArray[np.float32]
+    Proton_dEdx_ST: NDArray[np.float32]
+    Proton_dEdx_TOF: NDArray[np.float32]
+    Proton_E_BCAL: NDArray[np.float32]
+    Proton_E_FCAL: NDArray[np.float32]
+    Proton_DeltaT_BCAL: NDArray[np.float32]
+    Proton_DeltaT_TOF: NDArray[np.float32]
+    Proton_DeltaT_FCAL: NDArray[np.float32]
+    Proton_Beta_BCAL: NDArray[np.float32]
+    Proton_Beta_TOF: NDArray[np.float32]
+    Proton_Beta_FCAL: NDArray[np.float32]
+    PiPlus1_P: NDArray[np.float32]
+    PiPlus1_Theta: NDArray[np.float32]
+    PiPlus1_dEdx_CDC: NDArray[np.float32]
+    PiPlus1_dEdx_CDC_integral: NDArray[np.float32]
+    PiPlus1_dEdx_FDC: NDArray[np.float32]
+    PiPlus1_dEdx_ST: NDArray[np.float32]
+    PiPlus1_dEdx_TOF: NDArray[np.float32]
+    PiPlus1_E_BCAL: NDArray[np.float32]
+    PiPlus1_E_FCAL: NDArray[np.float32]
+    PiPlus1_DeltaT_BCAL: NDArray[np.float32]
+    PiPlus1_DeltaT_TOF: NDArray[np.float32]
+    PiPlus1_DeltaT_FCAL: NDArray[np.float32]
+    PiPlus1_Beta_BCAL: NDArray[np.float32]
+    PiPlus1_Beta_TOF: NDArray[np.float32]
+    PiPlus1_Beta_FCAL: NDArray[np.float32]
+    PiMinus1_P: NDArray[np.float32]
+    PiMinus1_Theta: NDArray[np.float32]
+    PiMinus1_dEdx_CDC: NDArray[np.float32]
+    PiMinus1_dEdx_CDC_integral: NDArray[np.float32]
+    PiMinus1_dEdx_FDC: NDArray[np.float32]
+    PiMinus1_dEdx_ST: NDArray[np.float32]
+    PiMinus1_dEdx_TOF: NDArray[np.float32]
+    PiMinus1_E_BCAL: NDArray[np.float32]
+    PiMinus1_E_FCAL: NDArray[np.float32]
+    PiMinus1_DeltaT_BCAL: NDArray[np.float32]
+    PiMinus1_DeltaT_TOF: NDArray[np.float32]
+    PiMinus1_DeltaT_FCAL: NDArray[np.float32]
+    PiMinus1_Beta_BCAL: NDArray[np.float32]
+    PiMinus1_Beta_TOF: NDArray[np.float32]
+    PiMinus1_Beta_FCAL: NDArray[np.float32]
+    PiPlus2_P: NDArray[np.float32]
+    PiPlus2_Theta: NDArray[np.float32]
+    PiPlus2_dEdx_CDC: NDArray[np.float32]
+    PiPlus2_dEdx_CDC_integral: NDArray[np.float32]
+    PiPlus2_dEdx_FDC: NDArray[np.float32]
+    PiPlus2_dEdx_ST: NDArray[np.float32]
+    PiPlus2_dEdx_TOF: NDArray[np.float32]
+    PiPlus2_E_BCAL: NDArray[np.float32]
+    PiPlus2_E_FCAL: NDArray[np.float32]
+    PiPlus2_DeltaT_BCAL: NDArray[np.float32]
+    PiPlus2_DeltaT_TOF: NDArray[np.float32]
+    PiPlus2_DeltaT_FCAL: NDArray[np.float32]
+    PiPlus2_Beta_BCAL: NDArray[np.float32]
+    PiPlus2_Beta_TOF: NDArray[np.float32]
+    PiPlus2_Beta_FCAL: NDArray[np.float32]
+    PiMinus2_P: NDArray[np.float32]
+    PiMinus2_Theta: NDArray[np.float32]
+    PiMinus2_dEdx_CDC: NDArray[np.float32]
+    PiMinus2_dEdx_CDC_integral: NDArray[np.float32]
+    PiMinus2_dEdx_FDC: NDArray[np.float32]
+    PiMinus2_dEdx_ST: NDArray[np.float32]
+    PiMinus2_dEdx_TOF: NDArray[np.float32]
+    PiMinus2_E_BCAL: NDArray[np.float32]
+    PiMinus2_E_FCAL: NDArray[np.float32]
+    PiMinus2_DeltaT_BCAL: NDArray[np.float32]
+    PiMinus2_DeltaT_TOF: NDArray[np.float32]
+    PiMinus2_DeltaT_FCAL: NDArray[np.float32]
+    PiMinus2_Beta_BCAL: NDArray[np.float32]
+    PiMinus2_Beta_TOF: NDArray[np.float32]
+    PiMinus2_Beta_FCAL: NDArray[np.float32]
+    KShort1_Z: NDArray[np.float32]
+    KShort2_Z: NDArray[np.float32]
 
 
 def get_branch(branch_name: str, dim: int = 1) -> RootBranch:

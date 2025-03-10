@@ -44,6 +44,8 @@
       -e GLUEX_HOSTNAME="ernest.phys.cmu.edu" \
       pyroot-env run-analysis 4
 
+@run-slurm:
+  sbatch slurm_job.sh
 
 #@run-local WORKERS
 #    #!/usr/bin/env bash

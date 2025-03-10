@@ -1,8 +1,11 @@
 from pathlib import Path
+from typing import final
 
 import luigi
 import numpy as np
 from numpy.typing import NDArray
+from typing_extensions import override
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.paths import Paths
@@ -12,13 +15,16 @@ from thesis_analysis.tasks.rcdb import RCDB
 from thesis_analysis.utils import CCDBData, RCDBData
 
 
+@final
 class AccidentalsAndPolarization(luigi.Task):
     data_type = luigi.Parameter()
     run_period = luigi.Parameter()
 
+    @override
     def requires(self):
         return [GetData(self.data_type, self.run_period), CCDB(), RCDB()]
 
+    @override
     def output(self):
         input_path = Path(self.input()[0][0].path)
         return [
@@ -27,13 +33,14 @@ class AccidentalsAndPolarization(luigi.Task):
             )
         ]
 
+    @override
     def run(self):
         ccdb_data = Paths.ccdb
         rcdb_data = Paths.rcdb
         input_path = Path(self.input()[0][0].path)
         output_path = Path(self.output()[0].path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        is_mc = self.data_type != 'data'
+        is_mc = str(self.data_type) != 'data'
 
         branches = [
             get_branch('RunNumber'),
@@ -48,17 +55,19 @@ class AccidentalsAndPolarization(luigi.Task):
             get_branch('Weight'),
         ]
 
-        best_combo_map = {}
-        best_combo_chi2_map = {}
+        best_combo_map: dict[tuple[np.uint32, np.ulonglong], np.uint32] = {}
+        best_combo_chi2_map: dict[
+            tuple[np.uint32, np.ulonglong], np.float64
+        ] = {}
 
         def scan_combos(
             _i: int,
-            run_number: NDArray,
-            event_number: NDArray,
-            combo_number: NDArray,
-            chisqdof: NDArray,
-            *args,
-            **kwargs,
+            run_number: NDArray[np.uint32],
+            event_number: NDArray[np.ulonglong],
+            combo_number: NDArray[np.uint32],
+            chisqdof: NDArray[np.float32],
+            *_args,
+            **_kwargs,
         ):
             best_combo_chi2 = best_combo_chi2_map.get(
                 (run_number[0], event_number[0]), np.inf
@@ -73,16 +82,16 @@ class AccidentalsAndPolarization(luigi.Task):
 
         def process(
             _i: int,
-            run_number: NDArray,
-            event_number: NDArray,
-            combo_number: NDArray,
-            _chisqdof: NDArray,
-            e_beam: NDArray,
-            px_beam: NDArray,
-            py_beam: NDArray,
-            pz_beam: NDArray,
-            rf: NDArray,
-            weight: NDArray,
+            run_number: NDArray[np.uint32],
+            event_number: NDArray[np.ulonglong],
+            combo_number: NDArray[np.uint32],
+            _chisqdof: NDArray[np.float32],
+            e_beam: NDArray[np.float32],
+            px_beam: NDArray[np.float32],
+            py_beam: NDArray[np.float32],
+            pz_beam: NDArray[np.float32],
+            rf: NDArray[np.float32],
+            weight: NDArray[np.float32],
             ccdb_data: CCDBData,
             rcdb_data: RCDBData,
             *,

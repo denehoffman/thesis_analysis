@@ -1,7 +1,9 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
+from typing_extensions import override
 
 from thesis_analysis.constants import NBINS
 from thesis_analysis.paths import Paths
@@ -13,6 +15,7 @@ from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
+@final
 class SingleBinnedFit(luigi.Task):
     run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
@@ -24,6 +27,7 @@ class SingleBinnedFit(luigi.Task):
 
     resources = {'fit': 1}
 
+    @override
     def requires(self):
         return [
             SPlotWeights(
@@ -41,6 +45,7 @@ class SingleBinnedFit(luigi.Task):
             ),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -49,6 +54,7 @@ class SingleBinnedFit(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         analysis_path_set = AnalysisPath(
             Path(self.input()[0][0].path), Path(self.input()[1][0].path)
@@ -57,8 +63,8 @@ class SingleBinnedFit(luigi.Task):
         output_fit_path = Path(str(self.output()[0].path))
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
-        niters = int(self.niters)  # type: ignore
-        phase_factor = bool(self.phase_factor)  # type: ignore
+        niters = int(self.niters)  # pyright:ignore[reportArgumentType]
+        phase_factor = bool(self.phase_factor)
 
         fit_result = fit_binned(
             analysis_path_set,

@@ -1,16 +1,22 @@
+from typing import final
+
 import luigi
 from paramiko import SSHClient
 from scp import SCPClient
+from typing_extensions import override
+
 from thesis_analysis.constants import global_parameters
 from thesis_analysis.logger import logger
 
 
+@final
 class SCP(luigi.Task):
     remote_path = luigi.Parameter()
     local_path = luigi.Parameter()
 
     resources = {'scp': 1}
 
+    @override
     def run(self):
         with SSHClient() as ssh:
             ssh.load_system_host_keys()
@@ -28,5 +34,6 @@ class SCP(luigi.Task):
                     local_path=str(self.local_path),
                 )
 
+    @override
     def output(self):
         return [luigi.LocalTarget(self.local_path)]

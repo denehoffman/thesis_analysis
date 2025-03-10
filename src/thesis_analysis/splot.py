@@ -1,11 +1,10 @@
 import itertools
-import pickle
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Callable
 
 import numpy as np
 from iminuit import Minuit
+from numpy.typing import NDArray
 from scipy.stats import chi2
 
 from thesis_analysis.constants import RFL_RANGE
@@ -14,9 +13,8 @@ from thesis_analysis.utils import FitResult, Histogram
 
 
 def density_hist_to_pdf(
-    counts: np.ndarray,
-    bin_edges: np.ndarray,
-) -> Callable[[np.ndarray], np.ndarray]:
+    counts: NDArray[np.float32], bin_edges: NDArray[np.float32]
+) -> Callable[[NDArray[np.float32]], NDArray[np.float32]]:
     def pdf(x: float) -> float:
         idx = np.searchsorted(bin_edges, x, side='right') - 1
         if idx < 0 or idx >= len(counts):
@@ -37,17 +35,8 @@ class SPlotFitResult:
     lda_fits_sig: list[FitResult]
     lda_fits_bkg: list[FitResult]
     total_fit: FitResult
-    v: np.ndarray
+    v: NDArray[np.float64]
     converged: bool
-
-    def save(self, path: Path | str):
-        path = Path(path)
-        pickle.dump(self, path.open('wb'))
-
-    @staticmethod
-    def load(path: Path | str) -> 'SPlotFitResult':
-        path = Path(path)
-        return pickle.load(path.open('rb'))
 
     @property
     def aic(self) -> float:
@@ -94,7 +83,9 @@ class SPlotFitResult:
             self.total_fit.values[f'y{i + self.nsig}'] for i in range(self.nbkg)
         ]
 
-    def pdfs(self, rfl1: np.ndarray, rfl2: np.ndarray) -> list[np.ndarray]:
+    def pdfs(
+        self, rfl1: NDArray[np.float32], rfl2: NDArray[np.float32]
+    ) -> list[NDArray[np.float64]]:
         return [
             exp_pdf(rfl1, rfl2, self.ldas[i])
             for i in range(self.nsig + self.nbkg)
@@ -106,17 +97,8 @@ class SPlotFitResultD:
     hists_sig: list[tuple[Histogram, Histogram]]
     lda_fits_bkg: list[FitResult]
     total_fit: FitResult
-    v: np.ndarray
+    v: NDArray[np.float64]
     converged: bool
-
-    def save(self, path: Path | str):
-        path = Path(path)
-        pickle.dump(self, path.open('wb'))
-
-    @staticmethod
-    def load(path: Path | str) -> 'SPlotFitResult':
-        path = Path(path)
-        return pickle.load(path.open('rb'))
 
     @property
     def aic(self) -> float:
@@ -159,7 +141,7 @@ class SPlotFitResultD:
             self.total_fit.values[f'y{i + self.nsig}'] for i in range(self.nbkg)
         ]
 
-    def pdfs1(self, rfl1: np.ndarray) -> list[np.ndarray]:
+    def pdfs1(self, rfl1: NDArray[np.float32]) -> list[NDArray[np.float32]]:
         return [
             density_hist_to_pdf(
                 self.hists_sig[i][0].counts, self.hists_sig[i][0].bins
@@ -167,7 +149,7 @@ class SPlotFitResultD:
             for i in range(self.nsig)
         ]
 
-    def pdfs2(self, rfl2: np.ndarray) -> list[np.ndarray]:
+    def pdfs2(self, rfl2: NDArray[np.float32]) -> list[NDArray[np.float32]]:
         return [
             density_hist_to_pdf(
                 self.hists_sig[i][1].counts, self.hists_sig[i][1].bins
@@ -175,7 +157,9 @@ class SPlotFitResultD:
             for i in range(self.nsig)
         ]
 
-    def pdfs_sig(self, rfl1: np.ndarray, rfl2: np.ndarray) -> list[np.ndarray]:
+    def pdfs_sig(
+        self, rfl1: NDArray[np.float32], rfl2: NDArray[np.float32]
+    ) -> list[NDArray[np.floating]]:
         return [
             density_hist_to_pdf(
                 self.hists_sig[i][0].counts, self.hists_sig[i][0].bins
@@ -186,28 +170,41 @@ class SPlotFitResultD:
             for i in range(self.nsig)
         ]
 
-    def pdfs(self, rfl1: np.ndarray, rfl2: np.ndarray) -> list[np.ndarray]:
+    def pdfs(
+        self, rfl1: NDArray[np.float32], rfl2: NDArray[np.float32]
+    ) -> list[NDArray[np.floating]]:
         return self.pdfs_sig(rfl1, rfl2) + [
             exp_pdf(rfl1, rfl2, self.ldas[i]) for i in range(self.nbkg)
         ]
 
 
-def exp_pdf_single(rfl: np.ndarray, lda: float) -> np.ndarray:
+def exp_pdf_single(rfl: NDArray[np.float32], lda: float) -> NDArray[np.float64]:
     return np.exp(-rfl * lda) * lda
 
 
-def exp_pdf(rfl1: np.ndarray, rfl2: np.ndarray, lda: float) -> np.ndarray:
+def exp_pdf(
+    rfl1: NDArray[np.float32], rfl2: NDArray[np.float32], lda: float
+) -> NDArray[np.float64]:
     return exp_pdf_single(rfl1, lda) * exp_pdf_single(rfl2, lda)
 
 
 def fit_lda(
-    rfl1: np.ndarray, rfl2: np.ndarray, weight: np.ndarray, *, lda0: float
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    *,
+    lda0: float,
 ) -> Minuit:
     def nll(*args: float) -> float:
-        return -2.0 * np.sum(
-            np.sort(
-                weight
-                * np.log(exp_pdf(rfl1, rfl2, args[0]) + np.finfo(float).tiny)
+        return float(
+            -2.0
+            * np.sum(
+                np.sort(
+                    weight
+                    * np.log(
+                        exp_pdf(rfl1, rfl2, args[0]) + np.finfo(float).tiny
+                    )
+                )
             )
         )
 
@@ -222,20 +219,20 @@ def fit_lda(
 
 
 def fit_components(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    control: np.ndarray,
-    weight: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    control: NDArray[np.float32],
+    weight: NDArray[np.float32],
     *,
     n_spec: int,
-) -> tuple[list[float], list[Minuit]]:
+) -> tuple[list[np.float32], list[Minuit]]:
     tot_nevents = np.sum(weight)
 
     mass_bins = get_quantile_edges(control, bins=n_spec, weights=weight)
-    binned_nevents = []
-    fits = []
+    binned_nevents: list[np.float32] = []
+    fits: list[Minuit] = []
     for c_lo, c_hi in zip(mass_bins[:-1], mass_bins[1:]):
-        mask = (c_lo <= control) & (control < c_hi)
+        mask: NDArray[np.bool] = (c_lo <= control) & (control < c_hi)
         nevents = np.sum(weight[mask])
         binned_nevents.append(nevents)
         fit = fit_lda(rfl1[mask], rfl2[mask], weight[mask], lda0=100.0)
@@ -245,26 +242,34 @@ def fit_components(
 
 
 def fit_components_d(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    control: np.ndarray,
-    weight: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    control: NDArray[np.float32],
+    weight: NDArray[np.float32],
     *,
     n_spec: int,
     n_bins: int,
 ) -> tuple[
-    list[float],
-    list[Callable[[np.ndarray, np.ndarray], np.ndarray]],
+    list[np.float32],
+    list[
+        Callable[
+            [NDArray[np.float32], NDArray[np.float32]], NDArray[np.floating]
+        ]
+    ],
     list[tuple[Histogram, Histogram]],
 ]:
     tot_nevents = np.sum(weight)
 
     mass_bins = get_quantile_edges(control, bins=n_spec, weights=weight)
-    binned_nevents = []
-    pdfs = []
+    binned_nevents: list[np.float32] = []
+    pdfs: list[
+        Callable[
+            [NDArray[np.float32], NDArray[np.float32]], NDArray[np.floating]
+        ]
+    ] = []
     histograms: list[tuple[Histogram, Histogram]] = []
     for c_lo, c_hi in zip(mass_bins[:-1], mass_bins[1:]):
-        mask = (c_lo <= control) & (control < c_hi)
+        mask: NDArray[np.bool] = (c_lo <= control) & (control < c_hi)
         nevents = np.sum(weight[mask])
         binned_nevents.append(nevents)
         hist1 = np.histogram(
@@ -282,7 +287,9 @@ def fit_components_d(
             density=True,
         )
 
-        def pdf(t1: np.ndarray, t2: np.ndarray) -> np.ndarray:
+        def pdf(
+            t1: NDArray[np.float32], t2: NDArray[np.float32]
+        ) -> NDArray[np.floating]:
             pdf1 = density_hist_to_pdf(*hist1)(t1)
             pdf2 = density_hist_to_pdf(*hist2)(t2)
             return pdf1 * pdf2
@@ -294,17 +301,17 @@ def fit_components_d(
 
 
 def run_splot_fit(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    weight: np.ndarray,
-    rfl1_sigmc: np.ndarray,
-    rfl2_sigmc: np.ndarray,
-    control_sigmc: np.ndarray,
-    weight_sigmc: np.ndarray,
-    rfl1_bkgmc: np.ndarray,
-    rfl2_bkgmc: np.ndarray,
-    control_bkgmc: np.ndarray,
-    weight_bkgmc: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    rfl1_sigmc: NDArray[np.float32],
+    rfl2_sigmc: NDArray[np.float32],
+    control_sigmc: NDArray[np.float32],
+    weight_sigmc: NDArray[np.float32],
+    rfl1_bkgmc: NDArray[np.float32],
+    rfl2_bkgmc: NDArray[np.float32],
+    control_bkgmc: NDArray[np.float32],
+    weight_bkgmc: NDArray[np.float32],
     *,
     nsig: int,
     nbkg: int,
@@ -325,7 +332,7 @@ def run_splot_fit(
     ] + [fit_fraction * 0.5 * nevents for fit_fraction in fit_fractions_bkg]
     logger.debug(f'Yields init: {yields0}')
     # get λs from fits
-    ldas0 = [fit.values['lda'] for fit in fits_sig] + [
+    ldas0: list[float] = [fit.values['lda'] for fit in fits_sig] + [
         fit.values['lda'] for fit in fits_bkg
     ]
     logger.debug(f'λs init: {ldas0}')
@@ -333,7 +340,7 @@ def run_splot_fit(
     def nll(*args: float) -> float:
         yields = args[::2]
         ldas = args[1::2]
-        likelihoods = weight * np.log(
+        likelihoods: NDArray[np.float64] = weight * np.log(
             np.sum(
                 [
                     yields[i] * exp_pdf(rfl1, rfl2, ldas[i])
@@ -367,12 +374,14 @@ def run_splot_fit(
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
         raise Exception('sPlot yield fit failed!')
-    yields = [m.values[f'y{i}'] for i in range(n_spec)]
-    ldas = [m.values[f'lda{i}'] for i in range(n_spec)]
+    yields: list[float] = [m.values[f'y{i}'] for i in range(n_spec)]
+    ldas: list[float] = [m.values[f'lda{i}'] for i in range(n_spec)]
     logger.debug(f'Yields (fit): {yields}')
     logger.debug(f'λs (fit): {ldas}')
     pdfs = [exp_pdf(rfl1, rfl2, ldas[i]) for i in range(n_spec)]
-    denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
+    denom: NDArray[np.float64] = np.sum(
+        [yields[k] * pdfs[k] for k in range(n_spec)], axis=0
+    )
     inds = np.argwhere(
         np.power(denom, 2) == 0.0
     )  # if a component is very small, this can happen
@@ -388,7 +397,7 @@ def run_splot_fit(
             for i in range(n_spec)
         ]
     )
-    v = np.linalg.inv(v_inv)
+    v: NDArray[np.float64] = np.linalg.inv(v_inv)  # pyright:ignore[reportAssignmentType]
     logger.debug(f'V = {v.tolist()}')
     fit_result = SPlotFitResult(
         [
@@ -407,17 +416,17 @@ def run_splot_fit(
 
 
 def run_splot_fit_d(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    weight: np.ndarray,
-    rfl1_sigmc: np.ndarray,
-    rfl2_sigmc: np.ndarray,
-    control_sigmc: np.ndarray,
-    weight_sigmc: np.ndarray,
-    rfl1_bkgmc: np.ndarray,
-    rfl2_bkgmc: np.ndarray,
-    control_bkgmc: np.ndarray,
-    weight_bkgmc: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    rfl1_sigmc: NDArray[np.float32],
+    rfl2_sigmc: NDArray[np.float32],
+    control_sigmc: NDArray[np.float32],
+    weight_sigmc: NDArray[np.float32],
+    rfl1_bkgmc: NDArray[np.float32],
+    rfl2_bkgmc: NDArray[np.float32],
+    control_bkgmc: NDArray[np.float32],
+    weight_bkgmc: NDArray[np.float32],
     *,
     nsig: int,
     nsig_bins: int,
@@ -457,7 +466,7 @@ def run_splot_fit_d(
         yields_bkg = args[nsig::2]
         ldas = args[nsig + 1 :: 2]
         yields = yields_sig + yields_bkg
-        likelihoods = weight * np.log(
+        likelihoods: NDArray[np.float64] = weight * np.log(
             np.sum(
                 [[yields_sig[i] * sig_pdfs_evaluated[i]] for i in range(nsig)],
                 axis=0,
@@ -486,7 +495,10 @@ def run_splot_fit_d(
     for i in range(n_spec):
         m.limits[f'y{i}'] = (0.0, None)
     for i in range(nbkg):
-        m.limits[f'lda{nsig + i}'] = (max(ldas0[i] - 30, 0.01), ldas0[i] + 30)
+        m.limits[f'lda{nsig + i}'] = (
+            max(ldas0[i] - 30.0, 0.01),
+            ldas0[i] + 30.0,
+        )
         if fixed_bkg:
             m.fixed[f'lda{nsig + i}'] = True
     m.migrad(ncall=10_000)
@@ -494,14 +506,16 @@ def run_splot_fit_d(
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
         raise Exception('sPlot yield fit failed!')
-    yields = [m.values[f'y{i}'] for i in range(n_spec)]
-    ldas = [m.values[f'lda{nsig + i}'] for i in range(nbkg)]
+    yields: list[float] = [m.values[f'y{i}'] for i in range(n_spec)]
+    ldas: list[float] = [m.values[f'lda{nsig + i}'] for i in range(nbkg)]
     logger.debug(f'Yields (fit): {yields}')
     logger.debug(f'Background λs (fit): {ldas}')
     pdfs = sig_pdfs_evaluated + [
         exp_pdf(rfl1, rfl2, ldas[i]) for i in range(nbkg)
     ]
-    denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
+    denom: NDArray[np.float64] = np.sum(
+        [yields[k] * pdfs[k] for k in range(n_spec)], axis=0
+    )
     inds = np.argwhere(
         np.power(denom, 2) == 0.0
     )  # if a component is very small, this can happen
@@ -522,7 +536,7 @@ def run_splot_fit_d(
         ]
     )
     logger.debug(f'V⁻¹ = {v_inv.tolist()}')
-    v = np.linalg.inv(v_inv)
+    v: NDArray[np.float64] = np.linalg.inv(v_inv)  # pyright:ignore[reportAssignmentType]
     logger.debug(f'V = {v.tolist()}')
     fit_result = SPlotFitResultD(
         sig_hists,
@@ -539,17 +553,19 @@ def run_splot_fit_d(
 
 def get_sweights(
     fit_result: SPlotFitResult | SPlotFitResultD,
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    weight: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
     *,
     nsig: int,
     nbkg: int,
-) -> np.ndarray:
+) -> NDArray[np.float64]:
     n_spec = nsig + nbkg
     yields = fit_result.yields
     pdfs = fit_result.pdfs(rfl1, rfl2)
-    denom = np.sum([yields[k] * pdfs[k] for k in range(n_spec)], axis=0)
+    denom: NDArray[np.float64] = np.sum(
+        [yields[k] * pdfs[k] for k in range(n_spec)], axis=0
+    )
     inds = np.argwhere(
         np.power(denom, 2) == 0.0
     )  # if a component is very small, this can happen
@@ -589,8 +605,8 @@ class FactorizationFitResult:
 
 
 def get_quantile_edges(
-    variable: np.ndarray, *, bins: int, weights: np.ndarray
-) -> np.ndarray:
+    variable: NDArray[np.float32], *, bins: int, weights: NDArray[np.float32]
+) -> NDArray[np.float32]:
     # This is a custom wrapper method around numpy.quantile that
     # first rescales the weights so that they are between 0 and 1
     # and then runs the quantile method with those weights
@@ -606,8 +622,8 @@ def get_quantile_edges(
 
 
 def get_quantile_indices(
-    variable: np.ndarray, *, bins: int, weights: np.ndarray
-) -> list[np.ndarray]:
+    variable: NDArray[np.float32], *, bins: int, weights: NDArray[np.float32]
+) -> list[NDArray[np.intp]]:
     quantiles = get_quantile_edges(variable, bins=bins, weights=weights)
     quantiles[-1] = (
         np.inf
@@ -617,16 +633,20 @@ def get_quantile_indices(
 
 
 def run_factorization_fits(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    weight: np.ndarray,
-    control: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    control: NDArray[np.float32],
     *,
     bins: int,
 ) -> FactorizationFitResult:
     quantile_indices = get_quantile_indices(control, bins=bins, weights=weight)
 
-    def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
+    def generate_nll(
+        rfl1s: NDArray[np.float32],
+        rfl2s: NDArray[np.float32],
+        weights: NDArray[np.float32],
+    ):
         def nll(z: float, lda_s: float, lda_b: float) -> float:
             likelihoods = weights * np.log(
                 z * exp_pdf(rfl1s, rfl2s, lda_s)
@@ -673,9 +693,9 @@ def run_factorization_fits(
         logger.error('Null hypothesis fit failed!')
         raise Exception('Null hypothesis fit failed!')
 
-    h1s = []
+    h1s: list[Minuit] = []
     for i in range(bins):
-        h1 = Minuit(nlls[i], z=0.5, lda_s=12.0, lda_b=100.0)  # type: ignore
+        h1 = Minuit(nlls[i], z=0.5, lda_s=12.0, lda_b=100.0)  # pyright:ignore[reportArgumentType]
         h1.limits['z'] = (0.0, 1.0)
         h1.limits['lda_s'] = (5.0, 20.0)
         h1.limits['lda_b'] = (80.0, 120.0)
@@ -697,16 +717,20 @@ def run_factorization_fits(
 
 
 def run_factorization_fits_mc(
-    rfl1: np.ndarray,
-    rfl2: np.ndarray,
-    weight: np.ndarray,
-    control: np.ndarray,
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    control: NDArray[np.float32],
     *,
     bins: int,
 ) -> FactorizationFitResult:
     quantile_indices = get_quantile_indices(control, bins=bins, weights=weight)
 
-    def generate_nll(rfl1s: np.ndarray, rfl2s: np.ndarray, weights: np.ndarray):
+    def generate_nll(
+        rfl1s: NDArray[np.float32],
+        rfl2s: NDArray[np.float32],
+        weights: NDArray[np.float32],
+    ):
         def nll(lda: float) -> float:
             return float(
                 -2.0
@@ -732,7 +756,7 @@ def run_factorization_fits_mc(
     def nll0(lda: float) -> float:
         return np.sum(np.array([nlls[i](lda) for i in range(bins)]))
 
-    h0 = Minuit(nll0, lda=50.0)  # type: ignore
+    h0 = Minuit(nll0, lda=50.0)  # pyright:ignore[reportArgumentType]
     h0.limits['lda'] = (5.0, 120.0)
     h0.migrad(ncall=10_000)
     if not h0.valid:
@@ -740,9 +764,9 @@ def run_factorization_fits_mc(
         logger.error('Null hypothesis fit failed!')
         raise Exception('Null hypothesis fit failed!')
 
-    h1s = []
+    h1s: list[Minuit] = []
     for i in range(bins):
-        h1 = Minuit(nlls[i], lda=50.0)  # type: ignore
+        h1 = Minuit(nlls[i], lda=50.0)  # pyright:ignore[reportArgumentType]
         h1.limits['lda'] = (5.0, 120.0)
         h1.migrad(ncall=10_000)
         if not h1.valid:

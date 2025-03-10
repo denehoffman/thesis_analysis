@@ -1,10 +1,13 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+from typing_extensions import override
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -23,11 +26,13 @@ from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.factorization_fit import FactorizationFit
 
 
+@final
 class FactorizationPlot(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
     n_quantiles = luigi.IntParameter()
 
+    @override
     def requires(self):
         return [
             ChiSqDOF(self.data_type, run_period, self.chisqdof)
@@ -36,6 +41,7 @@ class FactorizationPlot(luigi.Task):
             FactorizationFit(self.data_type, self.chisqdof, self.n_quantiles),
         ]
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -44,6 +50,7 @@ class FactorizationPlot(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         input_data_paths = [
             Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
@@ -53,6 +60,8 @@ class FactorizationPlot(luigi.Task):
         )
         output_plot_path = Path(self.output()[0].path)
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
+
+        n_quantiles = int(self.n_quantiles)  # pyright:ignore[reportArgumentType]
 
         data_dfs = {
             i: root_io.get_branches(
@@ -79,7 +88,7 @@ class FactorizationPlot(luigi.Task):
 
         quantile_edges = get_quantile_edges(
             data_df[SPLOT_CONTROL],
-            bins=int(self.n_quantiles),  # type: ignore
+            bins=n_quantiles,
             weights=data_df['Weight'],
         )
         quantile_centers = (quantile_edges[1:] + quantile_edges[:-1]) / 2

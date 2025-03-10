@@ -4,6 +4,8 @@ from pathlib import Path
 
 import laddu as ld
 import numpy as np
+from numpy.typing import NDArray
+from typing_extensions import override
 
 from thesis_analysis.constants import (
     GUIDED_MAX_STEPS,
@@ -16,6 +18,7 @@ from thesis_analysis.utils import Histogram
 
 
 class LoggingObserver(ld.Observer):
+    @override
     def callback(self, step: int, status: ld.Status) -> tuple[ld.Status, bool]:
         logger.info(f'Step {step}: {status.fx}')
         return status, False
@@ -23,8 +26,9 @@ class LoggingObserver(ld.Observer):
 
 class GuidedLoggingObserver(ld.Observer):
     def __init__(self, ndof: int):
-        self.ndof = ndof
+        self.ndof: int = ndof
 
+    @override
     def callback(self, step: int, status: ld.Status) -> tuple[ld.Status, bool]:
         logger.info(f'Step {step}: {status.fx} ({status.fx / self.ndof})')
         if status.fx / self.ndof <= 1.0:
@@ -343,7 +347,7 @@ class UnbinnedFitResult:
     statuses: list[ld.Status]
     i_best: int
     paths: AnalysisPath | AnalysisPathSet
-    model = get_unbinned_model()
+    model: ld.Model
 
     @property
     def best_status(self) -> ld.Status:
@@ -365,7 +369,7 @@ class UnbinnedFitResult:
         nlls: list[ld.NLL],
         *,
         threads: int | None = None,
-    ) -> np.ndarray:
+    ) -> NDArray[np.float64]:
         return np.concatenate(
             [
                 nll.project(self.statuses[self.i_best].x, threads=threads)
@@ -379,7 +383,7 @@ class UnbinnedFitResult:
         nlls: list[ld.NLL],
         *,
         threads: int | None = None,
-    ) -> np.ndarray:
+    ) -> NDArray[np.float64]:
         return np.concatenate(
             [
                 nll.project_with(
@@ -397,7 +401,7 @@ class UnbinnedFitResult:
         *,
         bins: int,
         range: tuple[float, float],
-        weights: np.ndarray | None = None,
+        weights: NDArray[np.float64] | None = None,
     ) -> Histogram:
         res_mass = ld.Mass([2, 3])
         data = sum(datasets)
@@ -435,12 +439,13 @@ class BinnedFitResult:
     def __init__(
         self,
         results: list[BinnedFitResultBin],
-        edges: np.ndarray,
+        edges: NDArray[np.float64],
         paths: AnalysisPath | AnalysisPathSet,
+        model: ld.Model,
     ):
-        self.paths = paths
-        self.model = get_binned_model()
-        self.waveset_hists = {
+        self.paths: AnalysisPath | AnalysisPathSet = paths
+        self.model: ld.Model = model
+        self.waveset_hists: dict[Waveset, Histogram] = {
             Waveset.TOT: Histogram(
                 np.array([res.count_fit for res in results]), edges
             ),
@@ -466,10 +471,10 @@ class BinnedFitResult:
                 np.array([res.count_d2p for res in results]), edges
             ),
         }
-        self.data_hist = Histogram(
+        self.data_hist: Histogram = Histogram(
             np.array([res.count_data for res in results]), edges
         )
-        self.fit_hist = Histogram(
+        self.fit_hist: Histogram = Histogram(
             np.array([res.count_fit for res in results]), edges
         )
 
@@ -477,7 +482,7 @@ class BinnedFitResult:
 def fit_unbinned(
     paths: AnalysisPathSet,
     *,
-    p0: np.ndarray | None = None,
+    p0: NDArray[np.float64] | None = None,
     niters: int | None = None,
     phase_factor: bool = False,
 ) -> UnbinnedFitResult:
@@ -503,7 +508,7 @@ def fit_unbinned(
     logger.info(
         f'First evaluation: {total_nll.evaluate([1.0] * len(total_nll.parameters))}'
     )
-    all_statuses = []
+    all_statuses: list[ld.Status] = []
     status = None
     i_best = None
     best_nll = np.inf
@@ -531,7 +536,7 @@ def fit_unbinned(
         logger.error('All fits failed!')
         raise Exception('All fits failed!')
     logger.success(f'Done!\n{status}')
-    return UnbinnedFitResult(all_statuses, i_best, paths)
+    return UnbinnedFitResult(all_statuses, i_best, paths, model)
 
 
 def fit_binned(
@@ -553,7 +558,7 @@ def fit_binned(
         manager = ld.LikelihoodManager()
         if isinstance(paths, AnalysisPath):
             likelihood_model = manager.register(nlls[0].as_term()) + 0
-        elif isinstance(paths, AnalysisPathSet):
+        else:
             s17 = manager.register(nlls[0].as_term())
             s18 = manager.register(nlls[1].as_term())
             f18 = manager.register(nlls[2].as_term())
@@ -585,12 +590,12 @@ def fit_binned(
             logger.error(f'All fits failed for bin {ibin}!')
             raise Exception(f'All fits failed for bin {ibin}!')
         logger.success(f'Done!\n{status}')
-        weights_fit = np.array([])
-        weights_s0 = np.array([])
-        weights_p = np.array([])
-        weights_s0p = np.array([])
-        weights_s0n = np.array([])
-        weights_d2p = np.array([])
+        weights_fit: NDArray[np.float64] = np.array([])
+        weights_s0: NDArray[np.float64] = np.array([])
+        weights_p: NDArray[np.float64] = np.array([])
+        weights_s0p: NDArray[np.float64] = np.array([])
+        weights_s0n: NDArray[np.float64] = np.array([])
+        weights_d2p: NDArray[np.float64] = np.array([])
         for nll in nlls:
             weights_fit = np.append(
                 weights_fit, nll.project(status.x, threads=NUM_THREADS)
@@ -644,7 +649,7 @@ def fit_binned(
             )
         )
     return BinnedFitResult(
-        results, np.histogram_bin_edges([], nbins, range=RANGE), paths
+        results, np.histogram_bin_edges([], nbins, range=RANGE), paths, model
     )
 
 
@@ -668,7 +673,7 @@ def fit_unbinned_guided(
     # TODO: we might need to weight the TOT more than the others
     wavesets = [Waveset.TOT, Waveset.P, Waveset.N, Waveset.S0P, Waveset.D2P]
     guided_manager = ld.LikelihoodManager()
-    guided_terms = []
+    guided_terms: list[ld.extensions.LikelihoodID] = []
     n_accmc_tot = sum([nll.accmc.n_events_weighted for nll in nlls])
     for i, nll in enumerate(nlls):
         n_accmc = nll.accmc.n_events_weighted
@@ -710,7 +715,7 @@ def fit_unbinned_guided(
     ndof = NBINS * len(wavesets) - len(guided_nll.parameters)
     if not isinstance(binned_result, BinnedFitResult):
         ndof *= len(datasets[0])
-    all_statuses = []
+    all_statuses: list[ld.Status] = []
     status = None
     i_best = None
     best_nll = np.inf
@@ -736,4 +741,4 @@ def fit_unbinned_guided(
         logger.error('All fits failed!')
         raise Exception('All fits failed!')
     logger.success(f'Done!\n{status}')
-    return UnbinnedFitResult(all_statuses, i_best, paths)
+    return UnbinnedFitResult(all_statuses, i_best, paths, model)

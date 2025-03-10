@@ -1,7 +1,9 @@
 import pickle
 from pathlib import Path
+from typing import final
 
 import luigi
+from typing_extensions import override
 
 from thesis_analysis.constants import RUN_PERIODS
 from thesis_analysis.paths import Paths
@@ -16,6 +18,7 @@ from thesis_analysis.tasks.single_binned_fit import SingleBinnedFit
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
+@final
 class GuidedFit(luigi.Task):
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -27,6 +30,7 @@ class GuidedFit(luigi.Task):
 
     resources = {'fit': 1}
 
+    @override
     def requires(self):
         reqs = [
             SPlotWeights(
@@ -70,6 +74,7 @@ class GuidedFit(luigi.Task):
             ]
         return reqs
 
+    @override
     def output(self):
         return [
             luigi.LocalTarget(
@@ -78,6 +83,7 @@ class GuidedFit(luigi.Task):
             ),
         ]
 
+    @override
     def run(self):
         analysis_path_set = AnalysisPathSet(
             *[Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))],
@@ -105,8 +111,8 @@ class GuidedFit(luigi.Task):
         output_fit_path = Path(str(self.output()[0].path))
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
-        niters = int(self.niters)  # type: ignore
-        phase_factor = bool(self.phase_factor)  # type: ignore
+        niters = int(self.niters)  # pyright:ignore[reportArgumentType]
+        phase_factor = bool(self.phase_factor)
 
         fit_result = fit_unbinned_guided(
             analysis_path_set,
