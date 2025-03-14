@@ -11,12 +11,18 @@ from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
-from thesis_analysis.pwa import BinnedFitResult, Waveset
-from thesis_analysis.tasks.single_binned_fit import SingleBinnedFit
+from thesis_analysis.pwa import (
+    BinnedFitResultUncertainty,
+)
+from thesis_analysis.tasks.single_binned_fit_uncertainty import (
+    SingleBinnedFitUncertainty,
+)
+from thesis_analysis.wave import Wave
 
 
 @final
-class PlotSingleBinned(luigi.Task):
+class SingleBinnedPlot(luigi.Task):
+    waves = luigi.IntParameter()
     run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -24,11 +30,13 @@ class PlotSingleBinned(luigi.Task):
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
     phase_factor = luigi.BoolParameter(default=False)
+    uncertainty = luigi.Parameter(default='sqrt')
 
     @override
     def requires(self):
         return [
-            SingleBinnedFit(
+            SingleBinnedFitUncertainty(
+                self.waves,
                 self.run_period,
                 self.chisqdof,
                 self.splot_method,
@@ -36,6 +44,7 @@ class PlotSingleBinned(luigi.Task):
                 self.nbkg,
                 self.niters,
                 self.phase_factor,
+                self.uncertainty,
             ),
         ]
 
@@ -44,7 +53,7 @@ class PlotSingleBinned(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_fit_{self.run_period}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}.png'
+                / f'binned_fit_{self.run_period}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.png'
             ),
         ]
 
@@ -56,14 +65,15 @@ class PlotSingleBinned(luigi.Task):
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
         logger.debug(output_plot_path)
 
-        fit_result: BinnedFitResult = pickle.load(binned_fit_path.open('rb'))
+        fit_result: BinnedFitResultUncertainty = pickle.load(
+            binned_fit_path.open('rb')
+        )
+        waves = int(self.waves)  # pyright:ignore[reportArgumentType]
 
         mpl_style.use('thesis_analysis.thesis')
-        data_hist = fit_result.data_hist
-        fit_hist = fit_result.fit_hist
-        s0p_hist = fit_result.waveset_hists[Waveset.S0P]
-        s0n_hist = fit_result.waveset_hists[Waveset.S0N]
-        d2p_hist = fit_result.waveset_hists[Waveset.D2P]
+        data_hist = fit_result.fit_result.get_data_histogram()
+        fit_hists = fit_result.fit_result.get_histograms()
+        fit_lower_center_upper = fit_result.get_lower_center_upper()
         fig, ax = plt.subplots(ncols=2, sharey=True)
         ax[0].stairs(
             data_hist.counts,
@@ -71,52 +81,30 @@ class PlotSingleBinned(luigi.Task):
             color=colors.black,
             label=f'Data ({str(self.run_period).upper()})',
         )
-        ax[0].stairs(
-            fit_hist.counts,
-            fit_hist.bins,
-            color=colors.black,
-            label='Fit',
-            fill=True,
-            alpha=0.2,
-        )
         ax[1].stairs(
             data_hist.counts,
             data_hist.bins,
             color=colors.black,
             label='Data',
         )
-        ax[1].stairs(
-            fit_hist.counts,
-            fit_hist.bins,
-            color=colors.black,
-            label='Fit',
-            fill=True,
-            alpha=0.2,
-        )
-        ax[0].stairs(
-            s0p_hist.counts,
-            s0p_hist.bins,
-            color=colors.red,
-            label='$S_0^+$',
-            fill=True,
-            alpha=0.2,
-        )
-        ax[0].stairs(
-            s0n_hist.counts,
-            s0n_hist.bins,
-            color=colors.blue,
-            label='$S_0^-$',
-            fill=True,
-            alpha=0.2,
-        )
-        ax[1].stairs(
-            d2p_hist.counts,
-            d2p_hist.bins,
-            color=colors.red,
-            label='$D_2^+$',
-            fill=True,
-            alpha=0.2,
-        )
+        for wave in Wave.decode_waves(waves):
+            wave_hist = fit_hists[set([wave])]
+            wave_lcu = fit_lower_center_upper[set([wave])]
+            centers = (wave_hist.bins[1:] + wave_hist.bins[:-1]) / 2
+            ax[wave.plot_index(double=True)[0]].plot(
+                centers,
+                wave_hist.counts,
+                color=wave.plot_color,
+                marker='_',  # TODO: maybe make this with the xerr arg of errorbar instead?
+                linestyle='none',
+            )
+            ax[wave.plot_index(double=True)[0]].errorbar(
+                centers,
+                wave_lcu[1],
+                yerr=(wave_lcu[1] - wave_lcu[0], wave_lcu[2] - wave_lcu[1]),
+                fmt='none',
+                color=wave.plot_color,
+            )
         ax[0].legend()
         ax[1].legend()
         ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')

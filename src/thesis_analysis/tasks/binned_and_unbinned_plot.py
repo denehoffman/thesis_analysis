@@ -10,7 +10,7 @@ from typing_extensions import override
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS, NUM_THREADS, RANGE
 from thesis_analysis.paths import Paths
-from thesis_analysis.pwa import BinnedFitResult, UnbinnedFitResult, Waveset
+from thesis_analysis.pwa import BinnedFitResult, UnbinnedFitResult
 from thesis_analysis.tasks.binned_fit import BinnedFit
 from thesis_analysis.tasks.binned_plot import BinnedPlot
 from thesis_analysis.tasks.guided_plot import GuidedPlot

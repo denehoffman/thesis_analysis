@@ -1,12 +1,12 @@
 import sys as _sys
 
-from loguru import Record, logger
+from loguru import logger
 
 __all__ = ['logger']
 
 
-def formatter(record: Record) -> str:
-    level: str = record['level'].name
+def formatter(record) -> str:
+    level: str = record['level'].name  # pyright:ignore[reportUnknownVariableType]
     if level == 'TRACE':
         return '\x1b[30;47;1m TRACE    \x1b[0m {time:YYYY-MM-DDTHH::mm:ss.SSSS!UTC} - {message}\n{exception}'
     if level == 'DEBUG':

@@ -5,18 +5,22 @@ from typing import final
 import luigi
 from typing_extensions import override
 
-from thesis_analysis.constants import NBINS, RUN_PERIODS
+from thesis_analysis.constants import NBINS, RANGE, RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
-    AnalysisPathSet,
+    Binning,
+    SinglePathSet,
+    FullPathSet,
     fit_binned,
 )
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_weights import SPlotWeights
+from thesis_analysis.wave import Wave
 
 
 @final
 class BinnedFit(luigi.Task):
+    waves = luigi.IntParameter()
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
@@ -52,30 +56,42 @@ class BinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}.pkl'
+                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}.pkl'
             ),
         ]
 
     @override
     def run(self):
-        analysis_path_set = AnalysisPathSet(
-            *[Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))],
+        analysis_path_set = FullPathSet(
             *[
-                Path(self.input()[i + len(RUN_PERIODS)][0].path)
-                for i in range(len(RUN_PERIODS))
-            ],
+                SinglePathSet(data_path, accmc_path)
+                for data_path, accmc_path in zip(
+                    [
+                        Path(self.input()[i][0].path)
+                        for i in range(len(RUN_PERIODS))
+                    ],
+                    [
+                        Path(self.input()[i + len(RUN_PERIODS)][0].path)
+                        for i in range(len(RUN_PERIODS))
+                    ],
+                )
+            ]
         )
 
         output_fit_path = Path(str(self.output()[0].path))
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
 
+        waves = int(self.waves)  # pyright:ignore[reportArgumentType]
         niters = int(self.niters)  # pyright:ignore[reportArgumentType]
         phase_factor = bool(self.phase_factor)
 
+        binning = Binning(NBINS, RANGE)
+
         fit_result = fit_binned(
+            Wave.decode_waves(waves),
             analysis_path_set,
-            nbins=NBINS,
-            niters=niters,
+            binning,
+            iters=niters,
             phase_factor=phase_factor,
         )
 
