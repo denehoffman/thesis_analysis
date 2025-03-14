@@ -1,11 +1,9 @@
 import pickle
 from pathlib import Path
-from typing import final
+from typing import final, override
 
 import luigi
 import numpy as np
-from typing_extensions import override
-
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     NSIG_BINS_DE,

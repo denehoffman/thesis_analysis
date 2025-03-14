@@ -1,16 +1,15 @@
 import pickle
 import sqlite3
+from typing import override
 
 import luigi
 import uproot
-from typing_extensions import override
-from uproot.behaviors.TBranch import HasBranches
-
 from thesis_analysis.constants import get_pol_angle, get_run_period
 from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.databases import GetDatabases
 from thesis_analysis.utils import Histogram, RCDBData
+from uproot.behaviors.TBranch import HasBranches
 
 
 class RCDB(luigi.Task):

@@ -1,10 +1,8 @@
 import pickle
 from pathlib import Path
-from typing import final
+from typing import final, override
 
 import luigi
-from typing_extensions import override
-
 from thesis_analysis.constants import NBINS, RANGE
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (

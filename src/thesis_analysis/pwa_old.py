@@ -2,11 +2,11 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
+from typing import override
 
 import laddu as ld
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import override
 
 from thesis_analysis.constants import (
     GUIDED_MAX_STEPS,

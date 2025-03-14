@@ -1,9 +1,8 @@
 import pickle
 import sqlite3
+from typing import override
 
 import luigi
-from typing_extensions import override
-
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.databases import GetDatabases
 from thesis_analysis.utils import CCDBData, ScalingFactors

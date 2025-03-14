@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import KW_ONLY, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, override
 
 import laddu as ld
 import numpy as np
 from numpy.typing import NDArray
-from typing_extensions import override
 
 from thesis_analysis.constants import GUIDED_MAX_STEPS, NUM_THREADS
 from thesis_analysis.logger import logger

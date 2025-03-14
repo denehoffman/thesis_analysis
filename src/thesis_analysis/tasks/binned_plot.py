@@ -1,12 +1,10 @@
 import pickle
 from pathlib import Path
-from typing import final
+from typing import final, override
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-from typing_extensions import override
-
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
 from thesis_analysis.paths import Paths

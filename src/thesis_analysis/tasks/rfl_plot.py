@@ -1,12 +1,10 @@
 from pathlib import Path
-from typing import final
+from typing import final, override
 
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
-from typing_extensions import override
-
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,

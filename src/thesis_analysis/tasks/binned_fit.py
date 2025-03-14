@@ -1,16 +1,14 @@
 import pickle
 from pathlib import Path
-from typing import final
+from typing import final, override
 
 import luigi
-from typing_extensions import override
-
 from thesis_analysis.constants import NBINS, RANGE, RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     Binning,
-    SinglePathSet,
     FullPathSet,
+    SinglePathSet,
     fit_binned,
 )
 from thesis_analysis.tasks.chisqdof import ChiSqDOF

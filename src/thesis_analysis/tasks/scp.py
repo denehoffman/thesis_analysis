@@ -1,10 +1,8 @@
-from typing import final
+from typing import final, override
 
 import luigi
 from paramiko import SSHClient
 from scp import SCPClient
-from typing_extensions import override
-
 from thesis_analysis.constants import global_parameters
 from thesis_analysis.logger import logger
 
