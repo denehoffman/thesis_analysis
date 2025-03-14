@@ -299,20 +299,16 @@ class Wave:
         pos_r_waves = [wave for wave in waves if wave.positive]
         neg_r_waves = [wave for wave in waves if wave.negative]
         manager = ld.Manager()
-        if mass_dependent:
-            pos_amps = [wave.coefficient(manager) for wave in pos_r_waves]
-        else:
-            pos_amps = [wave.coefficient(manager) for wave in pos_r_waves]
         pos_amps = (
             [wave.coefficient(manager) for wave in pos_r_waves]
-            if mass_dependent
+            if not mass_dependent
             else [
                 ld.amplitude_sum(wave.kmatrix(manager)) for wave in pos_r_waves
             ]
         )
         neg_amps = (
             [wave.coefficient(manager) for wave in neg_r_waves]
-            if mass_dependent
+            if not mass_dependent
             else [
                 ld.amplitude_sum(wave.kmatrix(manager)) for wave in neg_r_waves
             ]
@@ -335,4 +331,6 @@ class Wave:
         pos_im_sum = ld.amplitude_sum(pos_im_terms).norm_sqr()
         neg_re_sum = ld.amplitude_sum(neg_re_terms).norm_sqr()
         neg_im_sum = ld.amplitude_sum(neg_im_terms).norm_sqr()
-        return manager.model(pos_re_sum + pos_im_sum + neg_re_sum + neg_im_sum)
+        expr = pos_re_sum + pos_im_sum + neg_re_sum + neg_im_sum
+        print(expr)
+        return manager.model(expr)
