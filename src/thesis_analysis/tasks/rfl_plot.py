@@ -5,6 +5,7 @@ import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,

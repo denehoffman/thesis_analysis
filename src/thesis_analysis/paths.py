@@ -21,6 +21,7 @@ class PathsSingleton:
         self.accmc: Path = self.datasets / 'accmc'
         self.genmc: Path = self.datasets / 'genmc'
         self.bkgmc: Path = self.datasets / 'bkgmc'
+        self.bggen: Path = self.datasets / 'bggen'
         self.databases: Path = self.root / 'databases'
         self.fits: Path = self.root / 'fits'
         self.reports: Path = self.root / 'reports'
@@ -32,6 +33,7 @@ class PathsSingleton:
             self.accmc.mkdir(parents=True, exist_ok=True)
             self.genmc.mkdir(parents=True, exist_ok=True)
             self.bkgmc.mkdir(parents=True, exist_ok=True)
+            self.bggen.mkdir(parents=True, exist_ok=True)
             self.databases.mkdir(parents=True, exist_ok=True)
             self.fits.mkdir(parents=True, exist_ok=True)
             self.reports.mkdir(parents=True, exist_ok=True)

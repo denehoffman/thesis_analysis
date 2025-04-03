@@ -7,7 +7,14 @@ import luigi
 from thesis_analysis.tasks.aux_plots import MakeAuxiliaryPlots
 
 # from thesis_analysis.tasks.binned_and_unbinned_plot import BinnedAndUnbinnedPlot
+from thesis_analysis.tasks.bggen import BGGENPlot
+from thesis_analysis.tasks.binned_and_unbinned_plot import BinnedAndUnbinnedPlot
+from thesis_analysis.tasks.binned_plot import BinnedPlot
+from thesis_analysis.tasks.bootstrap_uncertainty_comparison_plot import (
+    BootstrapUncertaintyComparisonPlot,
+)
 from thesis_analysis.tasks.chisqdof_plot import ChiSqDOFPlot
+from thesis_analysis.tasks.costheta_plot import CosThetaPlot
 from thesis_analysis.tasks.factorization_report import FactorizationReport
 
 # from thesis_analysis.tasks.guided_plot import GuidedPlot
@@ -18,110 +25,93 @@ from thesis_analysis.tasks.splot_report import SPlotReport
 from thesis_analysis.wave import Wave
 
 
-class RunAll(luigi.WrapperTask):
-    @override
-    def requires(self):
-        return [
-            # SPlotReport(
-            #     chisqdof=3.0,
-            #     nsig_max=3,
-            #     nbkg_max=3,
-            # ),
-            # FactorizationReport(chisqdof=3.0, max_quantiles=4),
-            # RFLPlot('data', chisqdof=3.0),
-            # RFLPlot('accmc', chisqdof=3.0),
-            # RFLPlot('bkgmc', chisqdof=3.0),
-            # ChiSqDOFPlot('data', bins=50),
-            # MassPlot('data', bins=50),
-            # ChiSqDOFPlot('accmc', bins=50),
-            # ChiSqDOFPlot('data', bins=50, chisqdof=3.0),
-            # MassPlot('data', bins=50, chisqdof=3.0),
-            # ChiSqDOFPlot('accmc', bins=50, chisqdof=3.0),
-            # ChiSqDOFPlot(
-            #     'data',
-            #     bins=50,
-            #     chisqdof=3.0,
-            #     splot_method='B',
-            #     nsig=2,
-            #     nbkg=2,
-            # ),
-            # MassPlot(
-            #     'data',
-            #     bins=50,
-            #     chisqdof=3.0,
-            #     splot_method='B',
-            #     nsig=2,
-            #     nbkg=2,
-            # ),
-            # ChiSqDOFPlot(
-            #     'data',
-            #     bins=50,
-            #     chisqdof=3.0,
-            #     splot_method='D',
-            #     nsig=1,
-            #     nbkg=2,
-            # ),
-            # MassPlot(
-            #     'data',
-            #     bins=50,
-            #     chisqdof=3.0,
-            #     splot_method='D',
-            #     nsig=1,
-            #     nbkg=2,
-            # ),
-            # MakeAuxiliaryPlots(),
-            # FITS
-            SingleBinnedPlot(
-                waves=Wave.encode_waves(
-                    set([Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')])
-                ),
-                run_period='s20',
-                chisqdof=3.0,
+def run_all(chisqdof: float) -> list[luigi.Task]:
+    return [
+        RFLPlot('data', chisqdof=chisqdof),
+        RFLPlot('accmc', chisqdof=chisqdof),
+        RFLPlot('bkgmc', chisqdof=chisqdof),
+        ChiSqDOFPlot('data', bins=50),
+        MassPlot('data', bins=50),
+        ChiSqDOFPlot('accmc', bins=50),
+        ChiSqDOFPlot('data', bins=50, chisqdof=chisqdof),
+        MassPlot('data', bins=50, chisqdof=chisqdof),
+        ChiSqDOFPlot('accmc', bins=50, chisqdof=chisqdof),
+        ChiSqDOFPlot(
+            'data',
+            bins=50,
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+        ),
+        MassPlot(
+            'data',
+            bins=50,
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+        ),
+        CosThetaPlot(
+            'data',
+            bins=50,
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+        ),
+        # FITS
+        *[
+            BinnedAndUnbinnedPlot(
+                waves=waves,
+                chisqdof=chisqdof,
                 splot_method='D',
                 nsig=1,
                 nbkg=2,
                 niters=1,
-                phase_factor=False,
-                uncertainty='sqrt',
-            ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0,
-            #     splot_method='B',
-            #     nsig=2,
-            #     nbkg=2,
-            #     guided=True,
-            #     averaged=True,
-            #     phase_factor=True,
-            # ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0,
-            #     splot_method='B',
-            #     nsig=2,
-            #     nbkg=2,
-            #     guided=True,
-            #     averaged=True,
-            # ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0, splot_method='B', nsig=2, nbkg=2
-            # ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0,
-            #     splot_method='D',
-            #     nsig=1,
-            #     nbkg=2,
-            #     guided=True,
-            #     averaged=True,
-            #     phase_factor=True,
-            # ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0,
-            #     splot_method='D',
-            #     nsig=1,
-            #     nbkg=2,
-            #     guided=True,
-            #     averaged=True,
-            # ),
-            # BinnedAndUnbinnedPlot(
-            #     chisqdof=3.0, splot_method='D', nsig=1, nbkg=2
-            # ),
+                guided=guided,
+                phase_factor=phase_factor,
+                uncertainty='bootstrap',
+                bootstrap_mode='CI-BC',
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves(
+                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+                ),
+            ]
+            for guided in [True, False]
+            for phase_factor in [True, False]
+        ],
+        BootstrapUncertaintyComparisonPlot(
+            waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+            niters=1,
+            phase_factor=False,
+        ),
+        BootstrapUncertaintyComparisonPlot(
+            waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+            niters=1,
+            phase_factor=True,
+        ),
+    ]
+
+
+class RunAll(luigi.WrapperTask):
+    @override
+    def requires(self):
+        return [
+            # *run_all(3.0),
+            *run_all(4.0),
+            # *run_all(5.0),
+            # *run_all(6.0),
+            # MakeAuxiliaryPlots(),
+            # BGGENPlot(run_period='s18'),
         ]

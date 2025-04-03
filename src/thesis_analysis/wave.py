@@ -1,5 +1,6 @@
 import re
 from itertools import combinations
+from typing import Literal, override
 
 import laddu as ld
 
@@ -15,6 +16,10 @@ class Wave:
         self.m: int = m
         self.r: str = r
 
+    @override
+    def __repr__(self) -> str:
+        return f'Wave({self.l}, {self.m}, {self.r})'
+
     def __lt__(self, other: 'Wave') -> bool:
         return (self.l, self.m, self.r) < (other.l, other.m, other.r)
 
@@ -28,21 +33,21 @@ class Wave:
         )
 
     @staticmethod
-    def encode_waves(waves: set['Wave']) -> int:
-        waves = set(waves)
+    def encode_waves(waves: list['Wave']) -> int:
+        waves = list(sorted(waves))
         encoded = 0
         for wave in waves:
             encoded = (encoded << 6) | wave.encode()
         return encoded
 
     @staticmethod
-    def decode_waves(encoded: int) -> set['Wave']:
+    def decode_waves(encoded: int) -> list['Wave']:
         waves = []
         while encoded:
             wave_data = encoded & 0b111111
             waves.append(Wave.decode(wave_data))
             encoded >>= 6
-        return set(waves)
+        return list(sorted(waves))
 
     @property
     def plot_color(self) -> str:
@@ -117,33 +122,42 @@ class Wave:
                 raise Exception('L > 3 is not supported!')
 
     @staticmethod
-    def power_set(waves: set['Wave']) -> list[set['Wave']]:
+    def power_set(waves: list['Wave']) -> list[list['Wave']]:
         return [
-            set(subset)
+            list(sorted(subset))
             for r in range(1, len(waves) + 1)
             for subset in combinations(waves, r)
         ]
 
     @staticmethod
-    def get_amplitude_names(wave: 'Wave', *, mass_dependent: bool) -> list[str]:
+    def get_amplitude_names(
+        wave: 'Wave', *, mass_dependent: bool, phase_factor: bool
+    ) -> list[str]:
         names: list[str] = []
         names.append(wave.zlm_name)
         if mass_dependent:
             names.extend(wave.kmatrix_names)
         else:
             names.append(wave.coefficient_name)
+        if phase_factor:
+            names.append('kappa')
+            names.append('k_scale')
         return names
 
     @staticmethod
     def get_waveset_names(
-        waveset: set['Wave'], *, mass_dependent: bool
+        waveset: list['Wave'], *, mass_dependent: bool, phase_factor: bool
     ) -> list[str]:
         return list(
-            set(
-                name
-                for wave in waveset
-                for name in Wave.get_amplitude_names(
-                    wave, mass_dependent=mass_dependent
+            list(
+                set(
+                    name
+                    for wave in waveset
+                    for name in Wave.get_amplitude_names(
+                        wave,
+                        mass_dependent=mass_dependent,
+                        phase_factor=phase_factor,
+                    )
                 )
             )
         )
@@ -294,7 +308,7 @@ class Wave:
 
     @staticmethod
     def get_model(
-        waves: set['Wave'], *, mass_dependent: bool, phase_factor: bool = False
+        waves: list['Wave'], *, mass_dependent: bool, phase_factor: bool = False
     ) -> ld.Model:
         pos_r_waves = [wave for wave in waves if wave.positive]
         neg_r_waves = [wave for wave in waves if wave.negative]

@@ -1,4 +1,5 @@
 # pyright: basic
+from copy import copy
 from pathlib import Path
 from typing import Any, Callable
 
@@ -28,17 +29,26 @@ def get_branches(
     branch_arrays = []
     for branch in branches:
         arr = branch.get_array()
-        intree.SetBranchAddress(branch.name, arr)
+        if arr is not None:
+            intree.SetBranchAddress(branch.name, arr)
         branch_arrays.append(arr)
 
     for i in range(intree.GetEntries()):
         intree.GetEntry(i)
         for i, branch in enumerate(branch_arrays):
-            data_dict[branches[i].name].append(branch[0])
+            if branch is None:  # string type
+                data_dict[branches[i].name].append(
+                    str(getattr(intree, branches[i].name))
+                )
+            elif branches[i].dim == 1:
+                data_dict[branches[i].name].append(branch[0])
+            else:
+                data_dict[branches[i].name].append(branch)
 
     infile.Close()
     branch_dict: RootBranchDict = {
-        key: np.array(value) for key, value in data_dict.items()
+        key: np.array(value, dtype=branch.dtype)
+        for branch, (key, value) in zip(branches, data_dict.items())
     }  # pyright:ignore[reportAssignmentType]
     return branch_dict
 

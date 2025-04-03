@@ -31,7 +31,7 @@ RUN_RANGES = {
 NUM_THREADS = 8
 NBINS = 40
 RANGE = (1.0, 2.0)
-GUIDED_MAX_STEPS = 100
+GUIDED_MAX_STEPS = 300
 RFL_RANGE = (0.0, 0.5)
 NSIG_BINS_DE = 200
 
@@ -45,11 +45,12 @@ def get_run_period(run_number: int) -> str | None:
     return None
 
 
+# from GlueX docdb:3977
 TRUE_POL_ANGLES = {
     's17': {'0.0': 1.8, '45.0': 47.9, '90.0': 94.5, '135.0': -41.6},
     's18': {'0.0': 4.1, '45.0': 48.5, '90.0': 94.2, '135.0': -42.4},
     'f18': {'0.0': 3.3, '45.0': 48.3, '90.0': 92.9, '135.0': -42.1},
-    's20': {'0.0': 0.0, '45.0': 45.0, '90.0': 90.0, '135.0': -45.0},
+    's20': {'0.0': 1.4, '45.0': 47.1, '90.0': 93.4, '135.0': -42.2},
 }
 
 
@@ -74,6 +75,8 @@ class RootBranch:
     dim: int = 1
 
     def get_array(self):
+        if self.dtype == np.str_:
+            return None
         return np.zeros(self.dim, dtype=self.dtype)
 
 
@@ -108,6 +111,8 @@ class RootBranchDict(TypedDict):
     LogConf: NDArray[np.float32]
     ChiSqDOF: NDArray[np.float32]
     RF: NDArray[np.float32]
+    MM2: NDArray[np.float32]
+    Proton_Z: NDArray[np.float32]
     Proton_P: NDArray[np.float32]
     Proton_Theta: NDArray[np.float32]
     Proton_dEdx_CDC: NDArray[np.float32]
@@ -185,6 +190,7 @@ class RootBranchDict(TypedDict):
     PiMinus2_Beta_FCAL: NDArray[np.float32]
     KShort1_Z: NDArray[np.float32]
     KShort2_Z: NDArray[np.float32]
+    Topology: NDArray[np.str_]
 
 
 def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
@@ -219,6 +225,8 @@ def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
         'LogConf': np.float32,
         'ChiSqDOF': np.float32,
         'RF': np.float32,
+        'MM2': np.float32,
+        'Proton_Z': np.float32,
         'Proton_P': np.float32,
         'Proton_Theta': np.float32,
         'Proton_dEdx_CDC': np.float32,
@@ -296,6 +304,7 @@ def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
         'PiMinus2_Beta_FCAL': np.float32,
         'KShort1_Z': np.float32,
         'KShort2_Z': np.float32,
+        'Topology': np.str_,
     }
     return RootBranch(branch_name, BRANCH_TYPES[branch_name], dim=dim)
 
@@ -334,6 +343,7 @@ BRANCH_NAME_TO_LATEX: dict[str, str] = {
     # 'LogConf': np.float32,
     'ChiSqDOF': r'$\chi^2_\nu$',
     # 'RF': np.float32,
+    'Proton_Z': r'Proton $z$-vertex',
     # 'Proton_P': np.float32,
     # 'Proton_Theta': np.float32,
     # 'Proton_dEdx_CDC': np.float32,
@@ -444,6 +454,7 @@ BRANCH_NAME_TO_LATEX_UNITS: dict[str, str] = {
     # 'LogConf': np.float32,
     # 'ChiSqDOF': np.float32,
     # 'RF': np.float32,
+    'Proton_z': 'cm',
     # 'Proton_P': np.float32,
     # 'Proton_Theta': np.float32,
     # 'Proton_dEdx_CDC': np.float32,

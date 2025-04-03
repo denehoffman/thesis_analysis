@@ -70,6 +70,18 @@ class Histogram:
     counts: NDArray[np.floating]
     bins: NDArray[np.floating]
 
+    @staticmethod
+    def sum(histograms: list['Histogram']) -> 'Histogram | None':
+        if not histograms:
+            return None
+        bins = histograms[0].bins
+        for histogram in histograms:
+            assert histogram.bins == bins
+        counts = np.sum(
+            np.array([histogram.counts for histogram in histograms]), axis=0
+        )
+        return Histogram(counts, bins)
+
 
 class RCDBData:
     def __init__(

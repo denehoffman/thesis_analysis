@@ -3,16 +3,16 @@ from pathlib import Path
 from typing import final, override
 
 import luigi
+
 from thesis_analysis.constants import RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     FullPathSet,
+    GuidedFitResult,
     SinglePathSet,
-    UnbinnedFitResult,
     fit_unbinned,
 )
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
-from thesis_analysis.tasks.guided_fit import GuidedFit
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 from thesis_analysis.wave import Wave
 
@@ -26,9 +26,8 @@ class UnbinnedFit(luigi.Task):
     nbkg = luigi.IntParameter()
     niters = luigi.IntParameter(default=3, significant=False)
     guided = luigi.BoolParameter(default=False)
-    averaged = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
-    uncertainty = luigi.Parameter(default='sqrt')
+    uncertainty = luigi.Parameter(default='bootstrap')
 
     resources = {'fit': 1}
 
@@ -53,6 +52,8 @@ class UnbinnedFit(luigi.Task):
             for run_period in RUN_PERIODS
         ]
         if self.guided:
+            from thesis_analysis.tasks.guided_fit import GuidedFit
+
             reqs += [
                 GuidedFit(
                     self.waves,
@@ -61,7 +62,6 @@ class UnbinnedFit(luigi.Task):
                     self.nsig,
                     self.nbkg,
                     self.niters,
-                    self.averaged,
                     self.phase_factor,
                     self.uncertainty,
                 )
@@ -73,7 +73,7 @@ class UnbinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_averaged" if self.averaged else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.pkl'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.pkl'
             ),
         ]
 
@@ -103,10 +103,10 @@ class UnbinnedFit(luigi.Task):
         phase_factor = bool(self.phase_factor)
         p0 = None
         if self.guided:
-            guided_result: UnbinnedFitResult = pickle.load(
+            guided_result: GuidedFitResult = pickle.load(
                 Path(self.input()[-1][0].path).open('rb')
             )
-            p0 = guided_result.status.x
+            p0 = guided_result.fit_result.status.x
 
         fit_result = fit_unbinned(
             Wave.decode_waves(waves),

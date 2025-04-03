@@ -1,6 +1,7 @@
 from typing import final, override
 
 import luigi
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.scp import SCP
 
@@ -36,6 +37,15 @@ class GetData(luigi.Task):
                 's18': '/raid3/nhoffman/analysis/4PIS18/ver19/final/flattree_final.root',
                 'f18': '/raid3/nhoffman/analysis/4PIF18/ver19/final/flattree_final.root',
                 's20': '/raid3/nhoffman/analysis/4PIS20/ver04/final/flattree_final.root',
+            },
+            'bggen': {
+                's18': '/raid3/nhoffman/analysis/BGGENS18/ver11/no_cuts/flattree_no_cuts.root',
+            },
+            'data_original': {
+                's17': '/raid3/nhoffman/analysis/S17/ver52/no_cuts/flattree_no_cuts.root',
+                's18': '/raid3/nhoffman/analysis/S18/ver19/no_cuts/flattree_no_cuts.root',
+                'f18': '/raid3/nhoffman/analysis/F18/ver19/no_cuts/flattree_no_cuts.root',
+                's20': '/raid3/nhoffman/analysis/S20/ver04/no_cuts/flattree_no_cuts.root',
             },
         }
         self.remote_path = self.path_map[str(self.data_type)][

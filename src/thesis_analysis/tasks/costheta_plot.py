@@ -5,22 +5,24 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-import thesis_analysis.colors as colors
+import numpy as np
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
-    DATA_TYPE_TO_LATEX,
+    BRANCH_NAME_TO_LATEX_UNITS,
     RUN_PERIODS,
     get_branch,
 )
 from thesis_analysis.paths import Paths
 from thesis_analysis.tasks.accid_and_pol import AccidentalsAndPolarization
+from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.data import GetData
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 
 
 @final
-class ChiSqDOFPlot(luigi.Task):
+class CosThetaPlot(luigi.Task):
     data_type = luigi.Parameter()
     bins = luigi.IntParameter()
     original = luigi.BoolParameter(False)
@@ -36,9 +38,14 @@ class ChiSqDOFPlot(luigi.Task):
                 GetData(self.data_type, run_period)
                 for run_period in RUN_PERIODS
             ]
-        elif self.nsig is None and self.nbkg is None:
+        elif self.chisqdof is None:
             return [
                 AccidentalsAndPolarization(self.data_type, run_period)
+                for run_period in RUN_PERIODS
+            ]
+        elif self.nsig is None and self.nbkg is None:
+            return [
+                ChiSqDOF(self.data_type, run_period, self.chisqdof)
                 for run_period in RUN_PERIODS
             ]
         elif (
@@ -64,18 +71,18 @@ class ChiSqDOFPlot(luigi.Task):
     def output(self):
         path = Paths.plots
         if self.original:
-            return [luigi.LocalTarget(path / f'chisqdof_{self.data_type}.png')]
+            return [luigi.LocalTarget(path / f'costheta_{self.data_type}.png')]
         elif self.chisqdof is None:
             return [
                 luigi.LocalTarget(
-                    path / f'chisqdof_{self.data_type}_accpol.png'
+                    path / f'costheta_{self.data_type}_accpol.png'
                 )
             ]
         elif self.nsig is None and self.nbkg is None:
             return [
                 luigi.LocalTarget(
                     path
-                    / f'chisqdof_{self.data_type}_accpol_chisqdof_{self.chisqdof:.1f}.png'
+                    / f'costheta_{self.data_type}_accpol_chisqdof_{self.chisqdof:.1f}.png'
                 )
             ]
         elif (
@@ -86,11 +93,11 @@ class ChiSqDOFPlot(luigi.Task):
             return [
                 luigi.LocalTarget(
                     path
-                    / f'chisqdof_{self.data_type}_accpol_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
+                    / f'costheta_{self.data_type}_accpol_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
                 )
             ]
         else:
-            raise Exception('Invalid requirements for chisqdof plotting!')
+            raise Exception('Invalid requirements for CosTheta plotting!')
 
     @override
     def run(self):
@@ -100,43 +107,24 @@ class ChiSqDOFPlot(luigi.Task):
         bins = int(self.bins)  # pyright:ignore[reportArgumentType]
 
         branches = [
-            get_branch('ChiSqDOF'),
+            get_branch('M_Resonance'),
+            get_branch('HX_CosTheta'),
             get_branch('Weight'),
         ]
 
         data = root_io.get_branches(input_path, branches)
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
-        max_range = (
-            float(self.chisqdof)  # pyright:ignore[reportArgumentType]
-            if (
-                self.splot_method is not None
-                and self.nsig is not None
-                and self.nbkg is not None
-            )
-            else 10.0
+        ax.hist2d(
+            np.concatenate([data['M_Resonance'], data['M_Resonance']]),
+            np.concatenate([data['HX_CosTheta'], -data['HX_CosTheta']]),
+            weights=np.concatenate([data['Weight'], data['Weight']]),
+            bins=(bins, 50),
+            range=[(1.0, 2.0), (-1.0, 1.0)],
         )
-
-        ax.hist(
-            data['ChiSqDOF'],
-            weights=data['Weight'],
-            bins=bins,
-            range=(0.0, max_range),
-            color=colors.blue,
-            label=DATA_TYPE_TO_LATEX[str(self.data_type)],
+        ax.set_xlabel(
+            f'{BRANCH_NAME_TO_LATEX["M_Resonance"]} ({BRANCH_NAME_TO_LATEX_UNITS["M_Resonance"]})'
         )
-
-        if self.chisqdof is not None and (
-            self.splot_method is None
-            and self.nsig is None
-            and self.nbkg is None
-        ):
-            chisqdof = float(self.chisqdof)  # pyright:ignore[reportArgumentType]
-            ax.axvline(chisqdof, color=colors.red, ls=':')  # type: ignore
-
-        ax.set_xlabel(BRANCH_NAME_TO_LATEX['ChiSqDOF'])
-        bin_width = 1.0 / bins
-        ax.set_ylabel(f'Counts / {bin_width:.2f}')
-        ax.legend()
+        ax.set_ylabel(f'{BRANCH_NAME_TO_LATEX["HX_CosTheta"]}')
         fig.savefig(output_path)
         plt.close()

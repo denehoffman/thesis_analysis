@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import final, override
 
 import luigi
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     BinnedFitResult,
@@ -68,8 +69,11 @@ class BinnedFitUncertainty(luigi.Task):
             output = BinnedFitResultUncertainty(
                 [],
                 binned_fit_result,
-                bootstrapped=False,
-                sqrt=True,
+                uncertainty='sqrt',
             )
+        output.get_lower_center_upper(bootstrap_mode='SE')  # cache result
+        if uncertainty == 'bootstrap':
+            output.get_lower_center_upper(bootstrap_mode='CI')
+            output.get_lower_center_upper(bootstrap_mode='CI-BC')
 
         pickle.dump(output, output_unc_path.open('wb'))
