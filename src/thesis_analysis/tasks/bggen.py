@@ -177,7 +177,7 @@ class BGGENPlot(luigi.Task):
         ax.set_xlabel(BRANCH_NAME_TO_LATEX['RFL1'])
         bin_width = 1.0 / bins
         ax.set_ylabel(f'Counts / {bin_width:.2f}')
-        ax.set_yscale('log')
+        ax.set_ylabel(f'Counts / {bin_width:.2f}')
         ax.legend()
         fig.savefig(output_path_rfl)
         plt.close()
@@ -202,6 +202,7 @@ class BGGENPlot(luigi.Task):
         ax.set_xlabel('Missing Mass Squared')
         bin_width = 1.0 / bins
         ax.set_ylabel(f'Counts / {bin_width:.2f}')
+        ax.set_yscale('log')
         ax.legend()
         fig.savefig(output_path_mm2)
         plt.close()

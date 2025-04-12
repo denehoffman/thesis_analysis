@@ -28,6 +28,7 @@ class UnbinnedFit(luigi.Task):
     guided = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
+    bootstrap_mode = luigi.Parameter(default='SE')
 
     resources = {'fit': 1}
 
@@ -64,6 +65,7 @@ class UnbinnedFit(luigi.Task):
                     self.niters,
                     self.phase_factor,
                     self.uncertainty,
+                    self.bootstrap_mode,
                 )
             ]
         return reqs

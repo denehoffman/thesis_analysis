@@ -25,6 +25,7 @@ class UnbinnedPlot(luigi.Task):
     guided = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
+    bootstrap_mode = luigi.Parameter(default='SE')
 
     @override
     def requires(self):
@@ -39,6 +40,7 @@ class UnbinnedPlot(luigi.Task):
                 self.guided,
                 self.phase_factor,
                 self.uncertainty,
+                self.bootstrap_mode,
             ),
         ]
 

@@ -25,7 +25,7 @@ class GuidedPlot(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
-    bootstrap_mode = luigi.Parameter(default='CI-BC')
+    bootstrap_mode = luigi.Parameter(default='SE')
 
     @override
     def requires(self):

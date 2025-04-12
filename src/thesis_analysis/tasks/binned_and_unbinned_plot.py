@@ -32,7 +32,8 @@ class BinnedAndUnbinnedPlot(luigi.Task):
     guided = luigi.BoolParameter(default=False)
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
-    bootstrap_mode = luigi.Parameter(default='CI-BC')
+    bootstrap_mode = luigi.Parameter(default='SE')
+    bootstrap_mode_plot = luigi.Parameter(default='CI-BC')
 
     @override
     def requires(self):
@@ -57,6 +58,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.guided,
                 self.phase_factor,
                 self.uncertainty,
+                self.bootstrap_mode,
             ),
             BinnedPlot(
                 self.waves,
@@ -67,7 +69,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.niters,
                 self.phase_factor,
                 self.uncertainty,
-                self.bootstrap_mode,
+                self.bootstrap_mode_plot,
             ),
             UnbinnedPlot(
                 self.waves,
@@ -79,6 +81,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.guided,
                 self.phase_factor,
                 self.uncertainty,
+                self.bootstrap_mode,
             ),
         ]
         if self.guided:
@@ -121,7 +124,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             unbinned_fit_path.open('rb')
         )
         waves = int(self.waves)  # pyright:ignore[reportArgumentType]
-        bootstrap_mode = str(self.bootstrap_mode)
+        bootstrap_mode = str(self.bootstrap_mode_plot)
 
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots(ncols=2, sharey=True)

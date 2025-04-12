@@ -330,8 +330,8 @@ class Wave:
         if phase_factor:
             k = Wave.phase_space_factor(manager) * manager.register(
                 ld.Scalar(
-                    'k_scale', ld.constant(1e8)
-                )  # kappa tends to be ~1e-8
+                    'k_scale', ld.constant(1e11)
+                )  # kappa tends to be ~1e-11
             )
             pos_amps = [k * a for a in pos_amps]
             neg_amps = [k * a for a in neg_amps]
@@ -346,5 +346,4 @@ class Wave:
         neg_re_sum = ld.amplitude_sum(neg_re_terms).norm_sqr()
         neg_im_sum = ld.amplitude_sum(neg_im_terms).norm_sqr()
         expr = pos_re_sum + pos_im_sum + neg_re_sum + neg_im_sum
-        print(expr)
         return manager.model(expr)

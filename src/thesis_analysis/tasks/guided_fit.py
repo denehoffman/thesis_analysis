@@ -42,28 +42,6 @@ class GuidedFit(luigi.Task):
                 self.phase_factor,
                 self.uncertainty,
             ),
-            UnbinnedFit(
-                self.waves,
-                self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
-                self.niters,
-                guided=False,
-                phase_factor=self.phase_factor,
-                uncertainty=self.uncertainty,
-            ),
-            UnbinnedPlot(
-                self.waves,
-                self.chisqdof,
-                self.splot_method,
-                self.nsig,
-                self.nbkg,
-                self.niters,
-                guided=False,
-                phase_factor=self.phase_factor,
-                uncertainty=self.uncertainty,
-            ),
         ]
 
     @override
@@ -80,9 +58,6 @@ class GuidedFit(luigi.Task):
         binned_fit_result_uncertainty: BinnedFitResultUncertainty = pickle.load(
             Path(self.input()[0][0].path).open('rb')
         )
-        unbinned_fit_result: UnbinnedFitResult = pickle.load(
-            Path(self.input()[1][0].path).open('rb')
-        )
 
         output_fit_path = Path(str(self.output()[0].path))
         output_fit_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +67,6 @@ class GuidedFit(luigi.Task):
 
         fit_result = fit_guided(
             binned_fit_result_uncertainty,
-            p0=unbinned_fit_result.status.x,
             bootstrap_mode=bootstrap_mode,
             iters=niters,
         )

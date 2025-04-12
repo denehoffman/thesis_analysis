@@ -72,7 +72,7 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
                 guided=guided,
                 phase_factor=phase_factor,
                 uncertainty='bootstrap',
-                bootstrap_mode='CI-BC',
+                bootstrap_mode='SE',
             )
             for waves in [
                 Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
@@ -83,24 +83,24 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
             for guided in [True, False]
             for phase_factor in [True, False]
         ],
-        BootstrapUncertaintyComparisonPlot(
-            waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-            chisqdof=chisqdof,
-            splot_method='D',
-            nsig=1,
-            nbkg=2,
-            niters=1,
-            phase_factor=False,
-        ),
-        BootstrapUncertaintyComparisonPlot(
-            waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-            chisqdof=chisqdof,
-            splot_method='D',
-            nsig=1,
-            nbkg=2,
-            niters=1,
-            phase_factor=True,
-        ),
+        # BootstrapUncertaintyComparisonPlot(
+        #     waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #     chisqdof=chisqdof,
+        #     splot_method='D',
+        #     nsig=1,
+        #     nbkg=2,
+        #     niters=1,
+        #     phase_factor=False,
+        # ),
+        # BootstrapUncertaintyComparisonPlot(
+        #     waves=Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #     chisqdof=chisqdof,
+        #     splot_method='D',
+        #     nsig=1,
+        #     nbkg=2,
+        #     niters=1,
+        #     phase_factor=True,
+        # ),
     ]
 
 
@@ -112,6 +112,6 @@ class RunAll(luigi.WrapperTask):
             *run_all(4.0),
             # *run_all(5.0),
             # *run_all(6.0),
-            # MakeAuxiliaryPlots(),
-            # BGGENPlot(run_period='s18'),
+            MakeAuxiliaryPlots(),
+            BGGENPlot(run_period='s18'),
         ]
