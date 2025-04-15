@@ -804,7 +804,6 @@ def run_factorization_fits(
         n_spec=1,
         n_bins=nsig_bins,
     )
-    sig_pdf_evaluated = sig_pdfs[0](rfl1, rfl2)
 
     def generate_nll(
         rfl1s: NDArray[np.float32],
@@ -813,7 +812,7 @@ def run_factorization_fits(
     ):
         def nll(z: float, lda_b: float) -> float:
             likelihoods: NDArray[np.float64] = weight * np.log(
-                z * sig_pdf_evaluated
+                z * sig_pdfs[0](rfl1s, rfl2s)
                 + (1 - z) * exp_pdf(rfl1s, rfl2s, lda_b)
                 + np.finfo(float).tiny
             )
