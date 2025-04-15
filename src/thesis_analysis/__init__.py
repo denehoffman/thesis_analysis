@@ -114,4 +114,6 @@ class RunAll(luigi.WrapperTask):
             *run_all(6.0),
             MakeAuxiliaryPlots(),
             BGGENPlot(run_period='s18'),
+            FactorizationReport(3.0, max_quantiles=4),
+            SPlotReport(3.0, nsig_max=1, nbkg_max=4),
         ]

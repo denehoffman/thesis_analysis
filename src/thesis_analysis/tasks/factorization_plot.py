@@ -6,6 +6,7 @@ import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -113,32 +114,17 @@ class FactorizationPlot(luigi.Task):
                 )
                 ax.set_ylabel(r'$\lambda$ (ns${}^{-1}$)')
         else:
-            ax_bkg = ax.twinx()
-            ax.yaxis.label.set_color(colors.blue)
-            ax.tick_params(axis='y', colors=colors.blue)
-            ax_bkg.yaxis.label.set_color(colors.red)
-            ax_bkg.spines.left.set_edgecolor(colors.blue)
-            ax_bkg.spines.right.set_edgecolor(colors.red)
-            ax_bkg.tick_params(axis='y', colors=colors.red)
             for quantile_center, quantile_fit in zip(
                 quantile_centers, input_fit.h1s
             ):
                 ax.errorbar(
                     quantile_center,
-                    quantile_fit.values['lda_s'],
-                    yerr=quantile_fit.errors['lda_s'],
+                    quantile_fit.values['lda_b'],
+                    yerr=quantile_fit.errors['lda_b'],
                     color=colors.blue,
                     fmt='.',
                 )
-                ax_bkg.errorbar(
-                    quantile_center,
-                    quantile_fit.values['lda_b'],
-                    yerr=quantile_fit.errors['lda_b'],
-                    color=colors.red,
-                    fmt='.',
-                )
-                ax.set_ylabel(r'$\lambda_S$ (ns${}^{-1}$)')
-                ax_bkg.set_ylabel(r'$\lambda_B$ (ns${}^{-1}$)')
+                ax.set_ylabel(r'$\lambda_B$ (ns${}^{-1}$)')
         ax.set_xlabel(
             f'{BRANCH_NAME_TO_LATEX[SPLOT_CONTROL]} ({BRANCH_NAME_TO_LATEX_UNITS[SPLOT_CONTROL]})'
         )

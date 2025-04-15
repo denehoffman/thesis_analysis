@@ -31,7 +31,7 @@ class SPlotFitFailure:
 
 
 @dataclass
-class SPlotFitResult:
+class SPlotFitResultExp:
     lda_fits_sig: list[FitResult]
     lda_fits_bkg: list[FitResult]
     total_fit: FitResult
@@ -93,7 +93,7 @@ class SPlotFitResult:
 
 
 @dataclass
-class SPlotFitResultD:
+class SPlotFitResult:
     hists_sig: list[tuple[Histogram, Histogram]]
     lda_fits_bkg: list[FitResult]
     total_fit: FitResult
@@ -218,7 +218,7 @@ def fit_lda(
     return m
 
 
-def fit_components(
+def fit_components_exp(
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     control: NDArray[np.float32],
@@ -241,7 +241,7 @@ def fit_components(
     return fit_fractions, fits
 
 
-def fit_components_d(
+def fit_components(
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     control: NDArray[np.float32],
@@ -300,7 +300,7 @@ def fit_components_d(
     return fit_fractions, pdfs, histograms
 
 
-def run_splot_fit(
+def run_splot_fit_exp(
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     weight: NDArray[np.float32],
@@ -317,12 +317,12 @@ def run_splot_fit(
     nbkg: int,
     fixed_sig: bool,
     fixed_bkg: bool,
-) -> SPlotFitResult:
+) -> SPlotFitResultExp:
     n_spec = nsig + nbkg
-    fit_fractions_sig, fits_sig = fit_components(
+    fit_fractions_sig, fits_sig = fit_components_exp(
         rfl1_sigmc, rfl2_sigmc, control_sigmc, weight_sigmc, n_spec=nsig
     )
-    fit_fractions_bkg, fits_bkg = fit_components(
+    fit_fractions_bkg, fits_bkg = fit_components_exp(
         rfl1_bkgmc, rfl2_bkgmc, control_bkgmc, weight_bkgmc, n_spec=nbkg
     )
     nevents = np.sum(weight)
@@ -399,7 +399,7 @@ def run_splot_fit(
     )
     v: NDArray[np.float64] = np.linalg.inv(v_inv)  # pyright:ignore[reportAssignmentType]
     logger.debug(f'V = {v.tolist()}')
-    fit_result = SPlotFitResult(
+    fit_result = SPlotFitResultExp(
         [
             FitResult.from_minuit(fit_sig, len(rfl1_sigmc))
             for fit_sig in fits_sig
@@ -415,7 +415,7 @@ def run_splot_fit(
     return fit_result
 
 
-def run_splot_fit_d(
+def run_splot_fit(
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     weight: NDArray[np.float32],
@@ -432,9 +432,9 @@ def run_splot_fit_d(
     nsig_bins: int,
     nbkg: int,
     fixed_bkg: bool,
-) -> SPlotFitResultD:
+) -> SPlotFitResult:
     n_spec = nsig + nbkg
-    fit_fractions_sig, sig_pdfs, sig_hists = fit_components_d(
+    fit_fractions_sig, sig_pdfs, sig_hists = fit_components(
         rfl1_sigmc,
         rfl2_sigmc,
         control_sigmc,
@@ -522,10 +522,6 @@ def run_splot_fit_d(
     denom[inds] += np.sqrt(
         np.finfo(float).eps
     )  # push these values just lightly away from zero
-    logger.debug(f'min(denom) = {denom.min()}')
-    logger.debug(f'max(denom) = {denom.max()}')
-    imax = denom.argmax()
-    logger.debug(f'pdfs at max = {[pdfs[k][imax] for k in range(n_spec)]}')
     v_inv = np.array(
         [
             [
@@ -538,7 +534,7 @@ def run_splot_fit_d(
     logger.debug(f'V⁻¹ = {v_inv.tolist()}')
     v: NDArray[np.float64] = np.linalg.inv(v_inv)  # pyright:ignore[reportAssignmentType]
     logger.debug(f'V = {v.tolist()}')
-    fit_result = SPlotFitResultD(
+    fit_result = SPlotFitResult(
         sig_hists,
         [
             FitResult.from_minuit(fit_bkg, len(rfl1_bkgmc))
@@ -552,7 +548,7 @@ def run_splot_fit_d(
 
 
 def get_sweights(
-    fit_result: SPlotFitResult | SPlotFitResultD,
+    fit_result: SPlotFitResult | SPlotFitResultExp,
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     weight: NDArray[np.float32],
@@ -632,7 +628,7 @@ def get_quantile_indices(
     return [np.where(quantile_assignment == i)[0] for i in range(1, bins + 1)]
 
 
-def run_factorization_fits(
+def run_factorization_fits_exp(
     rfl1: NDArray[np.float32],
     rfl2: NDArray[np.float32],
     weight: NDArray[np.float32],
@@ -768,6 +764,100 @@ def run_factorization_fits_mc(
     for i in range(bins):
         h1 = Minuit(nlls[i], lda=50.0)  # pyright:ignore[reportArgumentType]
         h1.limits['lda'] = (5.0, 120.0)
+        h1.migrad(ncall=10_000)
+        if not h1.valid:
+            logger.debug(h1)
+            logger.error(f'Alternative hypothesis (bin {i}) fit failed!')
+            raise Exception(f'Null hypothesis (bin {i}) fit failed!')
+        h1s.append(h1)
+
+    return FactorizationFitResult(
+        FitResult.from_minuit(h0, len(rfl1)),
+        [
+            FitResult.from_minuit(h1s[i], len(quantile_indices[i]))
+            for i in range(bins)
+        ],
+        bins - 1,
+    )
+
+
+def run_factorization_fits(
+    rfl1: NDArray[np.float32],
+    rfl2: NDArray[np.float32],
+    weight: NDArray[np.float32],
+    control: NDArray[np.float32],
+    rfl1_sigmc: NDArray[np.float32],
+    rfl2_sigmc: NDArray[np.float32],
+    weight_sigmc: NDArray[np.float32],
+    control_sigmc: NDArray[np.float32],
+    *,
+    bins: int,
+    nsig_bins: int,
+) -> FactorizationFitResult:
+    quantile_indices = get_quantile_indices(control, bins=bins, weights=weight)
+
+    fit_fractions_sig, sig_pdfs, sig_hists = fit_components(
+        rfl1_sigmc,
+        rfl2_sigmc,
+        control_sigmc,
+        weight_sigmc,
+        n_spec=1,
+        n_bins=nsig_bins,
+    )
+    sig_pdf_evaluated = sig_pdfs[0](rfl1, rfl2)
+
+    def generate_nll(
+        rfl1s: NDArray[np.float32],
+        rfl2s: NDArray[np.float32],
+        weights: NDArray[np.float32],
+    ):
+        def nll(z: float, lda_b: float) -> float:
+            likelihoods: NDArray[np.float64] = weight * np.log(
+                z * sig_pdf_evaluated
+                + (1 - z) * exp_pdf(rfl1s, rfl2s, lda_b)
+                + np.finfo(float).tiny
+            )
+            return (
+                -2.0 * np.sum(np.sort(likelihoods))
+            )  # the integral term doesn't matter here since we are using this in a ratio where it cancels
+
+        return nll
+
+    nlls = [
+        generate_nll(
+            rfl1[quantile_indices[i]],
+            rfl2[quantile_indices[i]],
+            weight[quantile_indices[i]],
+        )
+        for i in range(bins)
+    ]
+
+    # arguments are (z_0, z_1, ..., z_{n-1}, lda_b)
+    def nll0(*args: float) -> float:
+        return np.sum(
+            np.array([nlls[i](args[i], args[-1]) for i in range(bins)])
+        )
+
+    h0 = Minuit(
+        nll0,
+        *[0.5] * bins,
+        100.0,
+        name=[f'z{i}' for i in range(bins)] + ['lda_b'],
+    )
+    for i in range(bins):
+        h0.limits[f'z{i}'] = (0.0, 1.0)
+    h0.limits['lda_b'] = (80.0, 120.0)
+    h0.migrad(ncall=10_000)
+    if not h0.valid:
+        logger.debug(h0)
+        logger.error('Null hypothesis fit failed!')
+        raise Exception('Null hypothesis fit failed!')
+
+    h1s: list[Minuit] = []
+    for i in range(bins):
+        h1 = Minuit(nlls[i], z=0.5, lda_b=100.0)  # pyright:ignore[reportArgumentType]
+        h1.limits['z'] = (0.0, 1.0)
+        h1.limits['lda_b'] = (80.0, 120.0)
         h1.migrad(ncall=10_000)
         if not h1.valid:
             logger.debug(h1)

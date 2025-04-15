@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import final, override
 
 import luigi
+
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     FactorizationFitResult,

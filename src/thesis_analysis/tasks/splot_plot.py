@@ -6,6 +6,7 @@ import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
+
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
@@ -17,7 +18,7 @@ from thesis_analysis.constants import (
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     SPlotFitFailure,
-    SPlotFitResult,
+    SPlotFitResultExp,
     exp_pdf_single,
 )
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
@@ -111,7 +112,7 @@ class SPlotPlot(luigi.Task):
         rfls = np.linspace(0.0, 0.2, 1000)
         ndata = np.sum(data_df['Weight'])
         z_total = np.sum(fit_result.yields)
-        if isinstance(fit_result, SPlotFitResult):
+        if isinstance(fit_result, SPlotFitResultExp):
             sig_lines = [
                 exp_pdf_single(rfls, fit_result.ldas_sig[i])
                 * fit_result.yields_sig[i]

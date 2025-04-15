@@ -4,9 +4,10 @@ from typing import final, override
 
 import luigi
 import numpy as np
+
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
-    NSIG_BINS_DE,
+    NSIG_BINS,
     RUN_PERIODS,
     SPLOT_CONTROL,
     get_branch,
@@ -15,7 +16,7 @@ from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     SPlotFitFailure,
     run_splot_fit,
-    run_splot_fit_d,
+    run_splot_fit_exp,
 )
 from thesis_analysis.tasks.chisqdof import ChiSqDOF
 
@@ -146,7 +147,7 @@ class SPlotFit(luigi.Task):
             if not str(self.splot_method).startswith('D') and not str(
                 self.splot_method
             ).startswith('E'):
-                fit_result = run_splot_fit(
+                fit_result = run_splot_fit_exp(
                     data_df['RFL1'],
                     data_df['RFL2'],
                     data_df['Weight'],
@@ -164,7 +165,7 @@ class SPlotFit(luigi.Task):
                     fixed_bkg=str(self.splot_method) == 'C',
                 )
             else:
-                fit_result = run_splot_fit_d(
+                fit_result = run_splot_fit(
                     data_df['RFL1'],
                     data_df['RFL2'],
                     data_df['Weight'],
@@ -177,7 +178,7 @@ class SPlotFit(luigi.Task):
                     bkgmc_df[SPLOT_CONTROL],
                     bkgmc_df['Weight'],
                     nsig=nsig,
-                    nsig_bins=NSIG_BINS_DE,
+                    nsig_bins=NSIG_BINS,
                     nbkg=nbkg,
                     fixed_bkg=str(self.splot_method) == 'E',
                 )
