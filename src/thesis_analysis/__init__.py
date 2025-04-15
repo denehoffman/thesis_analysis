@@ -108,10 +108,10 @@ class RunAll(luigi.WrapperTask):
     @override
     def requires(self):
         return [
-            # *run_all(3.0),
+            *run_all(3.0),
             *run_all(4.0),
-            # *run_all(5.0),
-            # *run_all(6.0),
+            *run_all(5.0),
+            *run_all(6.0),
             MakeAuxiliaryPlots(),
             BGGENPlot(run_period='s18'),
         ]
