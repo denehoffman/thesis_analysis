@@ -622,11 +622,12 @@ def fit_unbinned(
     best_nll = np.inf
     best_status = None
     rng = np.random.default_rng(0)
+    init_mag = 0.0001 if phase_factor else 1000.0
     for iiter in range(iters):
         p_init = (
             p0
             if p0 is not None
-            else rng.uniform(-1000.0, 1000.0, len(nll.parameters))
+            else rng.uniform(-init_mag, init_mag, len(nll.parameters))
         )
         status = nll.minimize(
             p_init,
