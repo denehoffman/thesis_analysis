@@ -47,6 +47,18 @@ class GetData(luigi.Task):
                 'f18': '/raid3/nhoffman/analysis/F18/ver19/no_cuts/flattree_no_cuts.root',
                 's20': '/raid3/nhoffman/analysis/S20/ver04/no_cuts/flattree_no_cuts.root',
             },
+            'accmc_original': {
+                's17': '/raid3/nhoffman/analysis/MCS17/ver52/no_cuts/flattree_no_cuts.root',
+                's18': '/raid3/nhoffman/analysis/MCS18/ver19/no_cuts/flattree_no_cuts.root',
+                'f18': '/raid3/nhoffman/analysis/MCF18/ver19/no_cuts/flattree_no_cuts.root',
+                's20': '/raid3/nhoffman/analysis/MCS20/ver04/no_cuts/flattree_no_cuts.root',
+            },
+            'bkgmc_original': {
+                's17': '/raid3/nhoffman/analysis/4PIS17/ver52/no_cuts/flattree_no_cuts.root',
+                's18': '/raid3/nhoffman/analysis/4PIS18/ver19/no_cuts/flattree_no_cuts.root',
+                'f18': '/raid3/nhoffman/analysis/4PIF18/ver19/no_cuts/flattree_no_cuts.root',
+                's20': '/raid3/nhoffman/analysis/4PIS20/ver04/no_cuts/flattree_no_cuts.root',
+            },
         }
         self.remote_path = self.path_map[str(self.data_type)][
             str(self.run_period)

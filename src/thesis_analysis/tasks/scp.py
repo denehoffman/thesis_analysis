@@ -3,7 +3,8 @@ from typing import final, override
 import luigi
 from paramiko import SSHClient
 from scp import SCPClient
-from thesis_analysis.constants import global_parameters
+
+from thesis_analysis.constants import GLUEX_HOSTNAME, GLUEX_USERNAME
 from thesis_analysis.logger import logger
 
 
@@ -19,8 +20,8 @@ class SCP(luigi.Task):
         with SSHClient() as ssh:
             ssh.load_system_host_keys()
             ssh.connect(
-                str(global_parameters().hostname),
-                username=str(global_parameters().username),
+                GLUEX_HOSTNAME,
+                username=GLUEX_USERNAME,
             )
 
             transport = ssh.get_transport()

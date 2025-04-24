@@ -176,6 +176,7 @@ class SPlotPlot(luigi.Task):
             f'Counts / {bin_width:.3f} {BRANCH_NAME_TO_LATEX_UNITS["RFL1"]}'
         )
         ax.set_yscale('log')
+        # ax.set_ylim(1)
         ax.legend()
         fig.savefig(output_plot_path)
         plt.close()

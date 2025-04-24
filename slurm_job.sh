@@ -13,4 +13,4 @@ source /raid3/nhoffman/root/root_install_313/bin/thisroot.sh
 cd "$PWD"
 uv pip install --reinstall .
 luigid --background --pidfile ./luigi.pid --logdir ./luigi.log &
-luigi --module thesis_analysis RunAll --global-parameters-username="nhoffman" --global-parameters-hostname="ernest.phys.cmu.edu" --workers=32
+GLUEX_USERNAME=nhoffman GLUEX_HOSTNAME=ernest.phys.cmu.edu NUM_THREADS=64 luigi --module thesis_analysis RunAll --workers=32

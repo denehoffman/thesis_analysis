@@ -12,6 +12,7 @@ from thesis_analysis.constants import (
     SPLOT_CONTROL,
     get_branch,
 )
+from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.splot import (
     SPlotFitFailure,
@@ -182,7 +183,8 @@ class SPlotFit(luigi.Task):
                     nbkg=nbkg,
                     fixed_bkg=str(self.splot_method) == 'E',
                 )
-        except Exception:
+        except Exception as e:
+            logger.error(e)
             fit_result = SPlotFitFailure()
 
         pickle.dump(fit_result, output_path.open('wb'))

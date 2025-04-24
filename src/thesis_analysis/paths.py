@@ -18,9 +18,12 @@ class PathsSingleton:
         self.root: Path = Path.cwd() / 'analysis'
         self.datasets: Path = self.root / 'datasets'
         self.data: Path = self.datasets / 'data'
+        self.data_original: Path = self.datasets / 'data_original'
         self.accmc: Path = self.datasets / 'accmc'
+        self.accmc_original: Path = self.datasets / 'accmc_original'
         self.genmc: Path = self.datasets / 'genmc'
         self.bkgmc: Path = self.datasets / 'bkgmc'
+        self.bkgmc_original: Path = self.datasets / 'bkgmc_original'
         self.bggen: Path = self.datasets / 'bggen'
         self.databases: Path = self.root / 'databases'
         self.fits: Path = self.root / 'fits'
@@ -30,9 +33,12 @@ class PathsSingleton:
             self.root.mkdir(parents=True, exist_ok=True)
             self.datasets.mkdir(parents=True, exist_ok=True)
             self.data.mkdir(parents=True, exist_ok=True)
+            self.data_original.mkdir(parents=True, exist_ok=True)
             self.accmc.mkdir(parents=True, exist_ok=True)
+            self.accmc_original.mkdir(parents=True, exist_ok=True)
             self.genmc.mkdir(parents=True, exist_ok=True)
             self.bkgmc.mkdir(parents=True, exist_ok=True)
+            self.bkgmc_original.mkdir(parents=True, exist_ok=True)
             self.bggen.mkdir(parents=True, exist_ok=True)
             self.databases.mkdir(parents=True, exist_ok=True)
             self.fits.mkdir(parents=True, exist_ok=True)

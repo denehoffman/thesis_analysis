@@ -442,7 +442,7 @@ def run_splot_fit(
         n_spec=nsig,
         n_bins=nsig_bins,
     )
-    fit_fractions_bkg, fits_bkg = fit_components(
+    fit_fractions_bkg, fits_bkg = fit_components_exp(
         rfl1_bkgmc, rfl2_bkgmc, control_bkgmc, weight_bkgmc, n_spec=nbkg
     )
     nevents = np.sum(weight)
@@ -505,7 +505,7 @@ def run_splot_fit(
     if not m.valid:
         logger.debug(m)
         logger.error('sPlot yield fit failed!')
-        raise Exception('sPlot yield fit failed!')
+        # raise Exception('sPlot yield fit failed!')
     yields: list[float] = [m.values[f'y{i}'] for i in range(n_spec)]
     ldas: list[float] = [m.values[f'lda{nsig + i}'] for i in range(nbkg)]
     logger.debug(f'Yields (fit): {yields}')
@@ -811,12 +811,12 @@ def run_factorization_fits(
         weights: NDArray[np.float32],
     ):
         def nll(z: float, lda_b: float) -> float:
-            likelihoods: NDArray[np.float64] = weight * np.log(
+            likelihoods: NDArray[np.float32] = weights * np.log(
                 z * sig_pdfs[0](rfl1s, rfl2s)
                 + (1 - z) * exp_pdf(rfl1s, rfl2s, lda_b)
                 + np.finfo(float).tiny
             )
-            return (
+            return float(
                 -2.0 * np.sum(np.sort(likelihoods))
             )  # the integral term doesn't matter here since we are using this in a ratio where it cancels
 

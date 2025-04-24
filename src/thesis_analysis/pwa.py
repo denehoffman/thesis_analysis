@@ -849,7 +849,7 @@ class BinnedFitResultUncertainty:
                     wave_intensities_in_bin = intensities_in_bin[
                         Wave.encode_waves(waveset)
                     ]
-                    mean = np.mean(wave_intensities_in_bin)
+                    # mean = np.mean(wave_intensities_in_bin)
                     std_err = np.std(wave_intensities_in_bin, ddof=1)
                     quantiles = np.array(
                         [fit_value - std_err, fit_value, fit_value + std_err],
@@ -877,7 +877,7 @@ class BinnedFitResultUncertainty:
 def calculate_bootstrap_uncertainty_binned(
     fit_result: BinnedFitResult,
     *,
-    nboot: int = 50,
+    nboot: int = 30,
 ) -> BinnedFitResultUncertainty:
     data_datasets = fit_result.paths.get_data_datasets_binned(
         fit_result.binning
@@ -1236,3 +1236,92 @@ def fit_guided(
             phase_factor,
         ),
     )
+
+
+def fit_binned_regularized(
+    unregularized_fit_result: BinnedFitResult,
+    lda: float,
+    *,
+    gamma: int = 2,
+    iters: int,
+) -> BinnedFitResult:
+    waves = unregularized_fit_result.waves
+    binning = unregularized_fit_result.binning
+    phase_factor = unregularized_fit_result.phase_factor
+    paths = unregularized_fit_result.paths
+    data_datasets = paths.get_data_datasets_binned(binning)
+    accmc_datasets = paths.get_accmc_datasets_binned(binning)
+    model = Wave.get_model(
+        waves, mass_dependent=False, phase_factor=phase_factor
+    )
+    statuses: list[ld.Status] = []
+    for ibin in range(binning.bins):
+        manager = ld.LikelihoodManager()
+        bin_model = ld.likelihood_sum(
+            [
+                manager.register(
+                    ld.NLL(model, ds_data[ibin], ds_accmc[ibin]).as_term()
+                )
+                for ds_data, ds_accmc in zip(data_datasets, accmc_datasets)
+            ]
+        )
+        parameter_sets = [
+            [f'{wave.coefficient_name} real', f'{wave.coefficient_name} imag']
+            for wave in waves
+            if wave.l != 0
+        ]
+        weight_sets = [
+            1
+            / np.power(
+                np.abs(
+                    np.array(
+                        [
+                            unregularized_fit_result.statuses[ibin].x[
+                                unregularized_fit_result.model.parameters.index(
+                                    p
+                                )
+                            ]
+                            for p in parameter_set
+                        ]
+                    )
+                ),
+                gamma,
+            )
+            for parameter_set in parameter_sets
+        ]
+        ridge_term = ld.likelihood_sum(
+            [
+                manager.register(
+                    ld.experimental.Regularizer(
+                        parameter_set, lda, 2, weights=weight_set
+                    )
+                )
+                for parameter_set, weight_set in zip(
+                    parameter_sets, weight_sets
+                )
+            ]
+        )
+        nll = manager.load(bin_model + ridge_term)
+        best_nll = np.inf
+        best_status = None
+        rng = np.random.default_rng(0)
+        for iiter in range(iters):
+            p_init = rng.uniform(-1000.0, 1000.0, len(nll.parameters))
+            status = nll.minimize(
+                p_init,
+                observers=[LoggingObserver()],
+                threads=NUM_THREADS,
+                skip_hessian=True,
+            )
+            if status.converged:
+                if status.fx < best_nll:
+                    best_nll = status.fx
+                    best_status = status
+        if best_status is None:
+            raise Exception('No fit converged')
+        best_status_with_hessian = nll.minimize(
+            best_status.x,
+            threads=NUM_THREADS,
+        )
+        statuses.append(best_status_with_hessian)
+    return BinnedFitResult(statuses, waves, model, paths, binning, phase_factor)

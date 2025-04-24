@@ -1,4 +1,3 @@
-# pyright: reportUnnecessaryComparison=false
 from pathlib import Path
 from typing import final, override
 
@@ -21,7 +20,7 @@ def topo_to_latex(topo: str) -> str:
 
 
 @final
-class BGGENPlot(luigi.Task):
+class BGGENPlots(luigi.Task):
     run_period = luigi.Parameter()
     chisqdof = luigi.OptionalFloatParameter(None)
     protonz = luigi.OptionalBoolParameter(False)
@@ -62,7 +61,7 @@ class BGGENPlot(luigi.Task):
         output_path_mm2 = self.output()[3].path
 
         if self.chisqdof is not None:
-            chisqdof = float(self.chisqdof)  # pyright:ignore[reportArgumentType]
+            chisqdof = float(self.chisqdof)
         else:
             chisqdof = None
 

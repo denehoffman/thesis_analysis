@@ -21,7 +21,7 @@ class SPlotReport(luigi.Task):
     @override
     def requires(self):
         nsig_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
-        nbkg_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
+        nbkg_max = int(self.nbkg_max)  # pyright:ignore[reportArgumentType]
         return [
             SPlotFit(
                 'data',
@@ -57,7 +57,7 @@ class SPlotReport(luigi.Task):
     @override
     def run(self):
         nsig_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
-        nbkg_max = int(self.nsig_max)  # pyright:ignore[reportArgumentType]
+        nbkg_max = int(self.nbkg_max)  # pyright:ignore[reportArgumentType]
         fit_results = {
             method: {
                 nsig: {
@@ -115,6 +115,7 @@ class SPlotReport(luigi.Task):
                         f'      {method_string} & ${nsig}$ & ${nbkg}$ & '
                     )
                     fit_result = fit_results[method][nsig][nbkg]
+                    print(fit_result)
                     if not isinstance(fit_result, SPlotFitFailure):
                         if (
                             fit_result.aic == min_aic

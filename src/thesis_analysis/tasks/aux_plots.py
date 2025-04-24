@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 import numpy as np
 from numpy.typing import NDArray
-from scipy.integrate import quad  # pyright:ignore[reportUnknownVariableType]
+from scipy.integrate import quad
 from scipy.special import sph_harm
+
 from thesis_analysis import colors
 from thesis_analysis.paths import Paths
 

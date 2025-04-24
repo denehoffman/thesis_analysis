@@ -68,9 +68,6 @@ class BinnedPlot(luigi.Task):
         mpl_style.use('thesis_analysis.thesis')
         data_hist = fit_result.fit_result.get_data_histogram()
         fit_hists = fit_result.fit_result.get_histograms()
-        print('available wavesets:')
-        for wave in fit_hists.keys():
-            print(Wave.decode_waves(wave))
         fit_error_bars = fit_result.get_error_bars(
             bootstrap_mode=bootstrap_mode
         )

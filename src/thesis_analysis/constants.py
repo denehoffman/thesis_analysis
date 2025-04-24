@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import TypedDict
 
@@ -13,8 +14,11 @@ DATA_TYPES = ['data', 'accmc', 'genmc', 'bkgmc']
 DATA_TYPE_TO_LATEX = {
     'data': 'Data',
     'accmc': '$K_S^0K_S^0$ MC',
-    'genmc': '$K^0_K^0$ MC (generated)',
+    'genmc': '$K_S^0K_S^0$ MC (generated)',
     'bkgmc': r'$4\pi$ MC',
+    'data_original': 'Data',
+    'accmc_original': '$K_S^0K_S^0$ MC',
+    'bkgmc_original': r'$4\pi$ MC',
 }
 MC_TYPES = ['accmc', 'genmc', 'bkgmc']
 CHISQDOF = [3.0, 3.5, 4.0, 4.5, 5.0]
@@ -28,12 +32,14 @@ RUN_RANGES = {
     's20': (71275, 79999),
 }
 
-NUM_THREADS = 8
 NBINS = 40
 RANGE = (1.0, 2.0)
 GUIDED_MAX_STEPS = 300
 RFL_RANGE = (0.0, 0.5)
 NSIG_BINS = 200
+NUM_THREADS = int(os.getenv('NUM_THREADS', 8))
+GLUEX_USERNAME = os.getenv('GLUEX_USERNAME', 'nhoffman')
+GLUEX_HOSTNAME = os.getenv('GLUEX_HOSTNAME', 'ernest.phys.cmu.edu')
 
 SIG_QUANTILES = [2, 3, 4, 5]
 
@@ -61,11 +67,6 @@ def get_pol_angle(run_period: str | None, angle_deg: str) -> float | None:
     if pol_angle_deg is None:
         return None
     return pol_angle_deg * np.pi / 180.0
-
-
-class global_parameters(luigi.Config):
-    username: luigi.Parameter = luigi.Parameter()
-    hostname: luigi.Parameter = luigi.Parameter('ernest.phys.cmu.edu')
 
 
 @dataclass
@@ -343,7 +344,7 @@ BRANCH_NAME_TO_LATEX: dict[str, str] = {
     # 'M_PPiM2': np.float32,
     # 'LogConf': np.float32,
     'ChiSqDOF': r'$\chi^2_\nu$',
-    # 'RF': np.float32,
+    'RF': r'$\Delta t_{\text{RF}}$',
     'Proton_Z': r'Proton $z$-vertex',
     # 'Proton_P': np.float32,
     # 'Proton_Theta': np.float32,
@@ -454,7 +455,7 @@ BRANCH_NAME_TO_LATEX_UNITS: dict[str, str] = {
     # 'M_PPiM2': np.float32,
     # 'LogConf': np.float32,
     # 'ChiSqDOF': np.float32,
-    # 'RF': np.float32,
+    'RF': 'ns',
     'Proton_z': 'cm',
     # 'Proton_P': np.float32,
     # 'Proton_Theta': np.float32,
