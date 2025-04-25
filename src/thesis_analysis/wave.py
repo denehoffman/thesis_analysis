@@ -72,6 +72,15 @@ class Wave:
         else:
             return (1, abs(self.m))
 
+    @staticmethod
+    def needs_full_plot(waves: list['Wave']) -> bool:
+        for wave in waves:
+            if wave.m < 0:
+                return True
+            if wave.l == 2 and wave.m != 2:
+                return True
+        return False
+
     @property
     def positive(self) -> bool:
         return self.r == '+'

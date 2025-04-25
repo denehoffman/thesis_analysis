@@ -71,60 +71,124 @@ class BinnedPlot(luigi.Task):
         fit_error_bars = fit_result.get_error_bars(
             bootstrap_mode=bootstrap_mode
         )
-        fig, ax = plt.subplots(ncols=2, sharey=True)
-        for i in {0, 1}:
-            ax[i].stairs(
-                data_hist.counts,
-                data_hist.bins,
-                color=colors.black,
-                label='Data',
-            )
-            fit_hist = fit_hists[waves]
-            err = fit_error_bars[waves]
-            centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2
-            ax[i].errorbar(
-                centers,
-                fit_hist.counts,
-                yerr=0,
-                fmt='.',
-                markersize=3,
-                color=colors.black,
-                label='Fit Total',
-            )
-            ax[i].errorbar(
-                centers,
-                err[1],
-                yerr=(err[0], err[2]),
-                fmt='none',
-                color=colors.black,
-            )
-        for wave in Wave.decode_waves(waves):
-            wave_hist = fit_hists[Wave.encode(wave)]
-            err = fit_error_bars[Wave.encode(wave)]
-            centers = (wave_hist.bins[1:] + wave_hist.bins[:-1]) / 2
-            ax[wave.plot_index(double=True)[0]].errorbar(
-                centers,
-                wave_hist.counts,
-                yerr=0,
-                fmt='.',
-                markersize=3,
-                color=wave.plot_color,
-                label=wave.latex,
-            )
-            ax[wave.plot_index(double=True)[0]].errorbar(
-                centers,
-                err[1],
-                yerr=(err[0], err[2]),
-                fmt='none',
-                color=wave.plot_color,
-            )
-        ax[0].legend()
-        ax[1].legend()
-        ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        ax[1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        bin_width_mev = int(1000 / NBINS)
-        ax[0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
-        ax[0].set_ylim(0)
-        ax[1].set_ylim(0)
-        fig.savefig(output_plot_path)
-        plt.close()
+        if Wave.needs_full_plot(Wave.decode_waves(waves)):
+            fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
+            for i in {0, 1}:
+                for j in {0, 1, 2}:
+                    ax[i][j].stairs(
+                        data_hist.counts,
+                        data_hist.bins,
+                        color=colors.black,
+                        label='Data',
+                    )
+                    fit_hist = fit_hists[waves]
+                    err = fit_error_bars[waves]
+                    centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2
+                    ax[i][j].errorbar(
+                        centers,
+                        fit_hist.counts,
+                        yerr=0,
+                        fmt='.',
+                        markersize=3,
+                        color=colors.black,
+                        label='Fit Total',
+                    )
+                    ax[i][j].errorbar(
+                        centers,
+                        err[1],
+                        yerr=(err[0], err[2]),
+                        fmt='none',
+                        color=colors.black,
+                    )
+            for wave in Wave.decode_waves(waves):
+                wave_hist = fit_hists[Wave.encode(wave)]
+                err = fit_error_bars[Wave.encode(wave)]
+                centers = (wave_hist.bins[1:] + wave_hist.bins[:-1]) / 2
+                plot_index = wave.plot_index(double=False)
+                ax[plot_index[0]][plot_index[1]].errorbar(
+                    centers,
+                    wave_hist.counts,
+                    yerr=0,
+                    fmt='.',
+                    markersize=3,
+                    color=wave.plot_color,
+                    label=wave.latex,
+                )
+                ax[plot_index[0]][plot_index[1]].errorbar(
+                    centers,
+                    err[1],
+                    yerr=(err[0], err[2]),
+                    fmt='none',
+                    color=wave.plot_color,
+                )
+            for i in {0, 1}:
+                for j in {0, 1, 2}:
+                    ax[i][j].legend()
+                    ax[i][j].set_ylim(0)
+            for j in {0, 1, 2}:
+                ax[1][j].set_xlabel(
+                    'Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)'
+                )
+            bin_width_mev = int(1000 / NBINS)
+            for i in {0, 1}:
+                ax[i][0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+            fig.savefig(output_plot_path)
+            plt.close()
+        else:
+            fig, ax = plt.subplots(ncols=2, sharey=True)
+            for i in {0, 1}:
+                ax[i].stairs(
+                    data_hist.counts,
+                    data_hist.bins,
+                    color=colors.black,
+                    label='Data',
+                )
+                fit_hist = fit_hists[waves]
+                err = fit_error_bars[waves]
+                centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2
+                ax[i].errorbar(
+                    centers,
+                    fit_hist.counts,
+                    yerr=0,
+                    fmt='.',
+                    markersize=3,
+                    color=colors.black,
+                    label='Fit Total',
+                )
+                ax[i].errorbar(
+                    centers,
+                    err[1],
+                    yerr=(err[0], err[2]),
+                    fmt='none',
+                    color=colors.black,
+                )
+            for wave in Wave.decode_waves(waves):
+                wave_hist = fit_hists[Wave.encode(wave)]
+                err = fit_error_bars[Wave.encode(wave)]
+                centers = (wave_hist.bins[1:] + wave_hist.bins[:-1]) / 2
+                ax[wave.plot_index(double=True)[0]].errorbar(
+                    centers,
+                    wave_hist.counts,
+                    yerr=0,
+                    fmt='.',
+                    markersize=3,
+                    color=wave.plot_color,
+                    label=wave.latex,
+                )
+                ax[wave.plot_index(double=True)[0]].errorbar(
+                    centers,
+                    err[1],
+                    yerr=(err[0], err[2]),
+                    fmt='none',
+                    color=wave.plot_color,
+                )
+            ax[0].legend()
+            ax[1].legend()
+            ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+            ax[1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+            bin_width_mev = int(1000 / NBINS)
+            ax[0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+            ax[0].set_ylim(0)
+            ax[1].set_ylim(0)
+            fig.savefig(output_plot_path)
+            plt.close()
