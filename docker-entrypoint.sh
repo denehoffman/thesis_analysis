@@ -14,8 +14,8 @@ echo "Luigi dashboard available at http://localhost:8082"
 cd /work
 
 if [ "$1" = "run-analysis" ]; then
-  luigi --module thesis_analysis RunAll \
-    --workers="$2"
+  echo "Starting analysis"
+  luigi --module thesis_analysis RunAll --workers="$2"
   read -n 1 -s -r -p "Press any key to continue..."
   echo "\n"
   /bin/bash

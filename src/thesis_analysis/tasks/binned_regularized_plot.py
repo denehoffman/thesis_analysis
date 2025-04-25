@@ -63,8 +63,8 @@ class BinnedRegularizedPlot(luigi.Task):
         waves = int(self.waves)  # pyright:ignore[reportArgumentType]
 
         mpl_style.use('thesis_analysis.thesis')
-        data_hist = fit_result.fit_result.get_data_histogram()
-        fit_hists = fit_result.fit_result.get_histograms()
+        data_hist = fit_result.get_data_histogram()
+        fit_hists = fit_result.get_histograms()
         fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
         for i in {0, 1, 2}:
             for j in {0, 1}:
