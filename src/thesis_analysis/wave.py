@@ -329,9 +329,7 @@ class Wave:
         )
         if phase_factor:
             k = Wave.phase_space_factor(manager) * manager.register(
-                ld.Scalar(
-                    'k_scale', ld.constant(1e11)
-                )  # kappa tends to be ~1e-11
+                ld.Scalar('k_scale', ld.constant(1e3))
             )
             pos_amps = [k * a for a in pos_amps]
             neg_amps = [k * a for a in neg_amps]
