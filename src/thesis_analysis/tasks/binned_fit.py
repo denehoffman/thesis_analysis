@@ -5,6 +5,7 @@ from typing import final, override
 import luigi
 
 from thesis_analysis.constants import NBINS, RANGE, RUN_PERIODS
+from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     Binning,
@@ -61,6 +62,7 @@ class BinnedFit(luigi.Task):
 
     @override
     def run(self):
+        logger.info('Beginning Binned Fit')
         analysis_path_set = FullPathSet(
             *[
                 SinglePathSet(data_path, accmc_path)

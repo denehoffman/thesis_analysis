@@ -4,16 +4,17 @@ from typing import final, override
 
 import luigi
 
+from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     BinnedFitResult,
-    fit_guided_regularized,
+    fit_binned_regularized,
 )
 from thesis_analysis.tasks.binned_fit import BinnedFit
 
 
 @final
-class BinnedRegulariedFit(luigi.Task):
+class BinnedRegularizedFit(luigi.Task):
     waves = luigi.IntParameter()
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -27,6 +28,7 @@ class BinnedRegulariedFit(luigi.Task):
 
     @override
     def requires(self):
+        logger.debug('checking dependencies for binned regularized fit')
         return [
             BinnedFit(
                 self.waves,
@@ -50,6 +52,7 @@ class BinnedRegulariedFit(luigi.Task):
 
     @override
     def run(self):
+        logger.info(f'Beginning Binned Regularized Fit (λ={self.lda})')
         binned_fit_result: BinnedFitResult = pickle.load(
             Path(self.input()[0][0].path).open('rb')
         )
@@ -60,7 +63,7 @@ class BinnedRegulariedFit(luigi.Task):
         niters = int(self.niters)  # pyright:ignore[reportArgumentType]
         lda = float(self.lda)  # pyright:ignore[reportArgumentType]
 
-        fit_result = fit_guided_regularized(
+        fit_result = fit_binned_regularized(
             binned_fit_result,
             lda=lda,
             iters=niters,

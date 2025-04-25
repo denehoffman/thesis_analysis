@@ -1256,6 +1256,7 @@ def fit_binned_regularized(
     )
     statuses: list[ld.Status] = []
     for ibin in range(binning.bins):
+        logger.info(f'Fitting bin {ibin} (regularized, λ={lda}')
         manager = ld.LikelihoodManager()
         bin_model = ld.likelihood_sum(
             [
@@ -1319,9 +1320,5 @@ def fit_binned_regularized(
                     best_status = status
         if best_status is None:
             raise Exception('No fit converged')
-        best_status_with_hessian = nll.minimize(
-            best_status.x,
-            threads=NUM_THREADS,
-        )
-        statuses.append(best_status_with_hessian)
+        statuses.append(best_status)
     return BinnedFitResult(statuses, waves, model, paths, binning, phase_factor)

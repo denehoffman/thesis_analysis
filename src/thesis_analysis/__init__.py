@@ -67,34 +67,34 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
                 splot_method='D',
                 nsig=1,
                 nbkg=2,
-                niters=10,
+                niters=1,
                 phase_factor=True,
                 lda=lda,
             )
             for lda in [10.0, 1.0, 0.1, 0.01, 0.0]
         ],
         # Fits
-        *[
-            BinnedAndUnbinnedPlot(
-                waves=waves,
-                chisqdof=chisqdof,
-                splot_method='D',
-                nsig=1,
-                nbkg=2,
-                niters=1,
-                guided=guided,
-                phase_factor=True,
-                uncertainty='bootstrap',
-                bootstrap_mode='SE',
-            )
-            for waves in [
-                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-                Wave.encode_waves(
-                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
-                ),
-            ]
-            for guided in [True, False]
-        ],
+        # *[
+        #     BinnedAndUnbinnedPlot(
+        #         waves=waves,
+        #         chisqdof=chisqdof,
+        #         splot_method='D',
+        #         nsig=1,
+        #         nbkg=2,
+        #         niters=1,
+        #         guided=guided,
+        #         phase_factor=True,
+        #         uncertainty='bootstrap',
+        #         bootstrap_mode='SE',
+        #     )
+        #     for waves in [
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #         Wave.encode_waves(
+        #             [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+        #         ),
+        #     ]
+        #     for guided in [True, False]
+        # ],
     ]
 
 

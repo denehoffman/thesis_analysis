@@ -8,6 +8,7 @@ import matplotlib.style as mpl_style
 
 from thesis_analysis import colors
 from thesis_analysis.constants import NBINS
+from thesis_analysis.logger import logger
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import BinnedFitResult
 from thesis_analysis.tasks.binned_regularized_fit import BinnedRegularizedFit
@@ -15,7 +16,7 @@ from thesis_analysis.wave import Wave
 
 
 @final
-class BinnedPlot(luigi.Task):
+class BinnedRegularizedPlot(luigi.Task):
     waves = luigi.IntParameter()
     chisqdof = luigi.FloatParameter()
     splot_method = luigi.Parameter()
@@ -27,6 +28,7 @@ class BinnedPlot(luigi.Task):
 
     @override
     def requires(self):
+        logger.debug('checking dependencies for binned regularized plot')
         return [
             BinnedRegularizedFit(
                 self.waves,
@@ -36,7 +38,6 @@ class BinnedPlot(luigi.Task):
                 self.nbkg,
                 self.niters,
                 self.phase_factor,
-                self.uncertainty,
                 self.lda,
             ),
         ]
@@ -52,6 +53,7 @@ class BinnedPlot(luigi.Task):
 
     @override
     def run(self):
+        logger.info(f'Beginning Binned Regularized Plot (λ={self.lda})')
         binned_fit_path = Path(str(self.input()[0][0]))
 
         output_plot_path = Path(str(self.output()[0].path))
