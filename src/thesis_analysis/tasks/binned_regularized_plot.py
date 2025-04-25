@@ -66,8 +66,8 @@ class BinnedRegularizedPlot(luigi.Task):
         data_hist = fit_result.get_data_histogram()
         fit_hists = fit_result.get_histograms()
         fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
-        for i in {0, 1, 2}:
-            for j in {0, 1}:
+        for i in {0, 1}:
+            for j in {0, 1, 2}:
                 ax[i][j].stairs(
                     data_hist.counts,
                     data_hist.bins,
@@ -98,14 +98,14 @@ class BinnedRegularizedPlot(luigi.Task):
                 color=wave.plot_color,
                 label=wave.latex,
             )
-        for i in {0, 1, 2}:
-            for j in {0, 1}:
+        for i in {0, 1}:
+            for j in {0, 1, 2}:
                 ax[i][j].legend()
                 ax[i][j].set_ylim(0)
-        for i in {0, 1, 2}:
-            ax[i][1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+        for j in {0, 1, 2}:
+            ax[1][j].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
         bin_width_mev = int(1000 / NBINS)
-        for j in {0, 1}:
-            ax[0][j].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+        for i in {0, 1}:
+            ax[i][0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
         fig.savefig(output_plot_path)
         plt.close()
