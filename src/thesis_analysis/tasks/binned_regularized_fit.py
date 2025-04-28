@@ -23,6 +23,7 @@ class BinnedRegularizedFit(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     phase_factor = luigi.BoolParameter(default=False)
     lda = luigi.FloatParameter()
+    gamma = luigi.FloatParameter()
 
     resources = {'fit': 1}
 
@@ -46,7 +47,7 @@ class BinnedRegularizedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'binned_regularized_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_lda_{self.lda}.pkl'
+                / f'binned_regularized_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_lda_{self.lda}_gamma_{self.gamma}.pkl'
             ),
         ]
 
@@ -62,10 +63,12 @@ class BinnedRegularizedFit(luigi.Task):
 
         niters = int(self.niters)  # pyright:ignore[reportArgumentType]
         lda = float(self.lda)  # pyright:ignore[reportArgumentType]
+        gamma = float(self.gamma)  # pyright:ignore[reportArgumentType]
 
         fit_result = fit_binned_regularized(
             binned_fit_result,
             lda=lda,
+            gamma=gamma,
             iters=niters,
         )
 

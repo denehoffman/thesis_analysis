@@ -54,66 +54,78 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
         #     nbkg=2,
         # ),
         # Regularized Fits
-        # BinnedPlot(
-        #     waves=Wave.encode_waves(
-        #         [
-        #             Wave(0, 0, '+'),
-        #             Wave(2, 0, '+'),
-        #             Wave(2, 1, '+'),
-        #             Wave(2, 2, '+'),
-        #         ]
-        #     ),
-        #     chisqdof=chisqdof,
-        #     splot_method='D',
-        #     nsig=1,
-        #     nbkg=2,
-        #     niters=1,
-        #     phase_factor=True,
-        #     uncertainty='bootstrap',
-        #     bootstrap_mode='SE',
-        # ),
-        # *[
-        #     BinnedRegularizedPlot(
-        #         waves=Wave.encode_waves(
-        #             [
-        #                 Wave(0, 0, '+'),
-        #                 Wave(2, 0, '+'),
-        #                 Wave(2, 1, '+'),
-        #                 Wave(2, 2, '+'),
-        #             ]
-        #         ),
-        #         chisqdof=chisqdof,
-        #         splot_method='D',
-        #         nsig=1,
-        #         nbkg=2,
-        #         niters=1,
-        #         phase_factor=True,
-        #         lda=lda,
-        #     )
-        #     for lda in [10.0, 1.0, 0.1, 0.01, 0.0]
-        # ],
-        # Fits
         *[
-            BinnedAndUnbinnedPlot(
-                waves=waves,
+            BinnedRegularizedPlot(
+                waves=Wave.encode_waves(waves),
                 chisqdof=chisqdof,
                 splot_method='D',
                 nsig=1,
                 nbkg=2,
                 niters=1,
-                guided=guided,
                 phase_factor=True,
-                uncertainty='bootstrap',
-                bootstrap_mode='SE',
+                lda=lda,
+                gamma=gamma,
             )
+            for lda in [1.0, 0.1, 0.01, 0.001, 0.0]
+            for gamma in [0.5, 1.0, 2.0]
             for waves in [
-                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-                Wave.encode_waves(
-                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
-                ),
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 2, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 1, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 0, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 1, '+'),
+                    Wave(2, 2, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 0, '+'),
+                    Wave(2, 2, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 0, '+'),
+                    Wave(2, 1, '+'),
+                ],
+                [
+                    Wave(0, 0, '+'),
+                    Wave(2, 0, '+'),
+                    Wave(2, 1, '+'),
+                    Wave(2, 2, '+'),
+                ],
             ]
-            for guided in [True, False]
         ],
+        # Fits
+        # *[
+        #     BinnedAndUnbinnedPlot(
+        #         waves=waves,
+        #         chisqdof=chisqdof,
+        #         splot_method='D',
+        #         nsig=1,
+        #         nbkg=2,
+        #         niters=1,
+        #         guided=guided,
+        #         phase_factor=True,
+        #         uncertainty='bootstrap',
+        #         bootstrap_mode='SE',
+        #     )
+        #     for waves in [
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #         Wave.encode_waves(
+        #             [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+        #         ),
+        #     ]
+        #     for guided in [True, False]
+        # ],
     ]
 
 

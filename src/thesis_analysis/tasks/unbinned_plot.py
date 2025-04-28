@@ -68,37 +68,101 @@ class UnbinnedPlot(luigi.Task):
         mpl_style.use('thesis_analysis.thesis')
         data_hist = fit_result.get_data_histogram(Binning(NBINS, RANGE))
         fit_hists = fit_result.get_histograms(Binning(NBINS, RANGE))
-        fig, ax = plt.subplots(ncols=2, sharey=True)
-        for i in {0, 1}:
-            ax[i].stairs(
-                data_hist.counts,
-                data_hist.bins,
-                color=colors.black,
-                label='Data',
-            )
-            ax[i].stairs(
-                fit_hists[waves].counts,
-                fit_hists[waves].bins,
-                color=colors.black,
-                label='Fit',
-                fill=True,
-                alpha=0.2,
-            )
-        for wave in Wave.decode_waves(waves):
-            wave_hist = fit_hists[Wave.encode(wave)]
-            ax[wave.plot_index(double=True)[0]].stairs(
-                wave_hist.counts,
-                wave_hist.bins,
-                color=wave.plot_color,
-                label=wave.latex,
-                fill=True,
-                alpha=0.2,
-            )
-        ax[0].legend()
-        ax[1].legend()
-        ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        ax[1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-        bin_width_mev = int(1000 / NBINS)
-        ax[0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
-        fig.savefig(output_plot_path)
-        plt.close()
+        if Wave.needs_full_plot(Wave.decode_waves(waves)):
+            fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
+            for i in {0, 1}:
+                for j in {0, 1, 2}:
+                    if not Wave.has_wave_at_index(
+                        Wave.decode_waves(waves), (i, j)
+                    ):
+                        continue
+                    ax[i][j].stairs(
+                        data_hist.counts,
+                        data_hist.bins,
+                        color=colors.black,
+                        label='Data',
+                    )
+            # Unbinned Plot
+            for i in {0, 1}:
+                for j in {0, 1, 2}:
+                    if not Wave.has_wave_at_index(
+                        Wave.decode_waves(waves), (i, j)
+                    ):
+                        continue
+                    ax[i][j].stairs(
+                        fit_hists[waves].counts,
+                        fit_hists[waves].bins,
+                        color=colors.black,
+                        label='Fit (Unbinned)',
+                        fill=True,
+                        alpha=0.2,
+                    )
+            for wave in Wave.decode_waves(waves):
+                wave_hist = fit_hists[Wave.encode(wave)]
+                plot_index = wave.plot_index(double=False)
+                ax[plot_index[0]][plot_index[1]].stairs(
+                    wave_hist.counts,
+                    wave_hist.bins,
+                    color=wave.plot_color,
+                    label=f'{wave.latex} (Unbinned)',
+                    fill=True,
+                    alpha=0.2,
+                )
+            for i in {0, 1}:
+                for j in {0, 1, 2}:
+                    if not Wave.has_wave_at_index(
+                        Wave.decode_waves(waves), (i, j)
+                    ):
+                        latex_group = Wave.get_latex_group_at_index((i, j))
+                        ax[i][j].text(
+                            0.5,
+                            0.5,
+                            f'No {latex_group}',
+                            ha='center',
+                            va='center',
+                            transform=ax[i][j].transAxes,
+                        )
+                    else:
+                        ax[i][j].legend()
+                        ax[i][j].set_ylim(0)
+            fig.supxlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+            bin_width_mev = int(1000 / NBINS)
+            fig.supylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+            fig.savefig(output_plot_path)
+            plt.close()
+        else:
+            fig, ax = plt.subplots(ncols=2, sharey=True)
+            for i in {0, 1}:
+                ax[i].stairs(
+                    data_hist.counts,
+                    data_hist.bins,
+                    color=colors.black,
+                    label='Data',
+                )
+            # Unbinned Plot
+            for i in {0, 1}:
+                ax[i].stairs(
+                    fit_hists[waves].counts,
+                    fit_hists[waves].bins,
+                    color=colors.black,
+                    label='Fit (Unbinned)',
+                    fill=True,
+                    alpha=0.2,
+                )
+            for wave in Wave.decode_waves(waves):
+                wave_hist = fit_hists[Wave.encode(wave)]
+                ax[wave.plot_index(double=True)[0]].stairs(
+                    wave_hist.counts,
+                    wave_hist.bins,
+                    color=wave.plot_color,
+                    label=f'{wave.latex} (Unbinned)',
+                    fill=True,
+                    alpha=0.2,
+                )
+            ax[0].legend()
+            ax[1].legend()
+            fig.supxlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+            bin_width_mev = int(1000 / NBINS)
+            fig.supylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+            fig.savefig(output_plot_path)
+            plt.close()

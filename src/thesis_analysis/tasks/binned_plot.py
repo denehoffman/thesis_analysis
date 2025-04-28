@@ -75,6 +75,10 @@ class BinnedPlot(luigi.Task):
             fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
             for i in {0, 1}:
                 for j in {0, 1, 2}:
+                    if not Wave.has_wave_at_index(
+                        Wave.decode_waves(waves), (i, j)
+                    ):
+                        continue
                     ax[i][j].stairs(
                         data_hist.counts,
                         data_hist.bins,
@@ -123,15 +127,24 @@ class BinnedPlot(luigi.Task):
                 )
             for i in {0, 1}:
                 for j in {0, 1, 2}:
-                    ax[i][j].legend()
-                    ax[i][j].set_ylim(0)
-            for j in {0, 1, 2}:
-                ax[1][j].set_xlabel(
-                    'Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)'
-                )
+                    if not Wave.has_wave_at_index(
+                        Wave.decode_waves(waves), (i, j)
+                    ):
+                        latex_group = Wave.get_latex_group_at_index((i, j))
+                        ax[i][j].text(
+                            0.5,
+                            0.5,
+                            f'No {latex_group}',
+                            ha='center',
+                            va='center',
+                            transform=ax[i][j].transAxes,
+                        )
+                    else:
+                        ax[i][j].legend()
+                        ax[i][j].set_ylim(0)
+            fig.supxlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
             bin_width_mev = int(1000 / NBINS)
-            for i in {0, 1}:
-                ax[i][0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
+            fig.supylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
             fig.savefig(output_plot_path)
             plt.close()
         else:
@@ -184,11 +197,10 @@ class BinnedPlot(luigi.Task):
                 )
             ax[0].legend()
             ax[1].legend()
-            ax[0].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-            ax[1].set_xlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
-            bin_width_mev = int(1000 / NBINS)
-            ax[0].set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
             ax[0].set_ylim(0)
             ax[1].set_ylim(0)
+            fig.supxlabel('Invariant Mass of $K_S^0K_S^0$ (GeV/$c^2$)')
+            bin_width_mev = int(1000 / NBINS)
+            fig.supylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
             fig.savefig(output_plot_path)
             plt.close()

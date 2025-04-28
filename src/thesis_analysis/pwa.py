@@ -1239,7 +1239,7 @@ def fit_binned_regularized(
     unregularized_fit_result: BinnedFitResult,
     lda: float,
     *,
-    gamma: int = 2,
+    gamma: float = 2.0,
     iters: int,
 ) -> BinnedFitResult:
     waves = unregularized_fit_result.waves

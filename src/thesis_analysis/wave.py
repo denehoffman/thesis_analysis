@@ -74,12 +74,28 @@ class Wave:
 
     @staticmethod
     def needs_full_plot(waves: list['Wave']) -> bool:
+        return len({wave.m for wave in waves if wave.l == 2}) > 1
+
+    @staticmethod
+    def has_wave_at_index(
+        waves: list['Wave'], index: tuple[int, int], *, double: bool = False
+    ) -> bool:
         for wave in waves:
-            if wave.m < 0:
-                return True
-            if wave.l == 2 and wave.m != 2:
+            if wave.plot_index(double=double) == index:
                 return True
         return False
+
+    @staticmethod
+    def get_latex_group_at_index(index: tuple[int, int]) -> str:
+        m = index[1]
+        if m == 0:
+            sign = 1
+            l = [0, 2][index[0]]  # noqa: E741
+        else:
+            sign = -(index[0] * 2 - 1)
+            l = 2  # noqa: E741
+        wave = Wave(l, m * sign, '+')
+        return wave.latex_group
 
     @property
     def positive(self) -> bool:

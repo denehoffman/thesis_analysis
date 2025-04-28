@@ -5,6 +5,7 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
