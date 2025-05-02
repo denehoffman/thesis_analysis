@@ -5,12 +5,13 @@ from typing import final, override
 import luigi
 import numpy as np
 
+from thesis_analysis.constants import NBOOT
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     BinnedFitResultUncertainty,
 )
 from thesis_analysis.tasks.binned_fit_uncertainty import BinnedFitUncertainty
-from thesis_analysis.waves import Wave
+from thesis_analysis.wave import Wave
 
 
 @final
@@ -44,7 +45,7 @@ class BinnedFitReport(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.reports
-                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{f"-{self.bootstrap_mode}" if str(self.uncertainty) == "bootstrap" else ""}.txt'
+                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.txt'
             ),
         ]
 
@@ -61,14 +62,27 @@ class BinnedFitReport(luigi.Task):
         waves = int(self.waves)  # pyright:ignore[reportArgumentType]
 
         output = r"""
-\begin{{table}}
-    \begin{{center}}
-        \begin{{tabular}}{{cccc}}\toprule
-            Bin & Parameter & Value & $\abs{{F}}^2$ \\"""
-        for ibin, bin_status in enumerate(fit_result.fit_result.statuses):
+\begin{center}
+    \begin{longtable}{ccrcccr}\toprule
+        Bin (GeV/$c^2$) & Parameter & Value & \hspace{1em} & Bin (GeV/$c^2$) & Parameter & Value \\\midrule
+        \endhead
+"""
+        statuses = fit_result.fit_result.statuses
+        edges = fit_result.fit_result.binning.edges
+        for ibin in range(0, len(statuses), 2):
+            bin_status = statuses[ibin]
+            bin_status2 = statuses[ibin + 1]
+            last_bin = (
+                ibin == len(statuses) - 1 or ibin + 1 == len(statuses) - 1
+            )
+            bin_edges = rf'{edges[ibin]:.3f}\textendash {edges[ibin + 1]:.3f}'
+            bin_edges2 = (
+                rf'{edges[ibin + 1]:.3f}\textendash {edges[ibin + 2]:.3f}'
+            )
             for iwave, wave in enumerate(Wave.decode_waves(waves)):
+                last_wave = iwave == len(Wave.decode_waves(waves)) - 1
                 coefficient_name = wave.coefficient_name
-                l_re = rf'$\Re{{{wave.latex}}}$'
+                l_re = rf'$\Re\left[{wave.latex.replace("$", "")}\right]$'
                 i_re = fit_result.fit_result.model.parameters.index(
                     f'{coefficient_name} real'
                 )
@@ -80,19 +94,21 @@ class BinnedFitReport(luigi.Task):
                     ],
                     ddof=1,
                 )
-                l_im = rf'$\Im{{{wave.latex}}}$'
-                if wave.l == 0:
-                    c_im = 0.0
-                    e_im = 0.0
-                    f_sq = c_re**2
-                    e_f_sq = np.std(
-                        [
-                            fit_result.samples[ibin][j][i_re] ** 2
-                            for j in range(len(fit_result.samples[ibin]))
-                        ],
-                        ddof=1,
-                    )
+                c_re2 = bin_status2.x[i_re]
+                e_re2 = np.std(
+                    [
+                        fit_result.samples[ibin + 1][j][i_re]
+                        for j in range(len(fit_result.samples[ibin + 1]))
+                    ],
+                    ddof=1,
+                )
+                output += '\n'
+                if iwave == 0:
+                    output += rf'            {bin_edges} & {l_re} & {latex(c_re, float(e_re))} & & {bin_edges2} & {l_re} & {latex(c_re2, float(e_re2))} \\*'
                 else:
+                    output += rf'               & {l_re} & {latex(c_re, float(e_re))} & &    & {l_re} & {latex(c_re2, float(e_re2))} \\*'
+                l_im = rf'$\Im\left[{wave.latex.replace("$", "")}\right]$'
+                if wave.l != 0:
                     i_im = fit_result.fit_result.model.parameters.index(
                         f'{coefficient_name} imag'
                     )
@@ -104,37 +120,36 @@ class BinnedFitReport(luigi.Task):
                         ],
                         ddof=1,
                     )
-                    f_sq = c_re**2 + c_im**2
-                    e_f_sq = np.std(
+                    c_im2 = bin_status2.x[i_im]
+                    e_im2 = np.std(
                         [
-                            fit_result.samples[ibin][j][i_re] ** 2
-                            + fit_result.samples[ibin][j][i_im] ** 2
-                            for j in range(len(fit_result.samples[ibin]))
+                            fit_result.samples[ibin + 1][j][i_im]
+                            for j in range(len(fit_result.samples[ibin + 1]))
                         ],
                         ddof=1,
                     )
-                if iwave == 0:
-                    output += f'\\midrule\n            {ibin:2}  '
-                else:
-                    output += '\n                '
-                output += rf'& {l_re} & {latex(c_re, e_re)} & {latex(f_sq, e_f_sq)} \\\n'
-                output += rf'& {l_im} & {latex(c_im, e_im)} & \\'
-        output += r"""\bottomrule
-            \end{tabular}
-        \caption{<insert caption>}\label{tab:<insert table name>}
-    \end{center}
-\end{table}
+                    output += '\n'
+                    output += rf'& {l_im} & {latex(c_im, float(e_im))} & &    & {l_im} & {latex(c_im2, float(e_im2))} \\*'
+                if last_wave:
+                    if last_bin:
+                        output += r'\bottomrule'
+                    else:
+                        output += r'\midrule'
+        output += rf"""
+    \caption{{The parameter values and uncertainties for the binned fit of <?> waves to data with $\chi^2_\nu < {self.chisqdof:.1f}$. Uncertainties are calculated from the standard error over ${NBOOT}$ bootstrap iterations.}}\label{{tab:binned-fit-chisqdof-{self.chisqdof:.1f}-<?>}}
+    \end{{longtable}}
+\end{{center}}
 """
         output_report_path.write_text(output)
 
 
 def latex(val: float, unc: float) -> str:
     unc_trunc = round(unc, -int(np.floor(np.log10(abs(unc)))) + 1)
-    val_trunc = round(val, -int(np.floor(np.log10(abs(unc)))) - 1)
-    expo = int(np.floor(np.log10(abs(val_trunc))))
+    val_trunc = round(val, -int(np.floor(np.log10(abs(unc)))) + 1)
+    ndigits = int(np.floor(np.log10(abs(unc)))) - 1
+    expo = int(
+        np.floor(np.log10(abs(val_trunc if val_trunc != 0.0 else unc_trunc)))
+    )
     val_mantissa = val_trunc / 10**expo
     unc_mantissa = unc_trunc / 10**expo
-    decimals = -int(np.floor(np.log10(abs(unc_mantissa)))) + 1
-    value_string = f'{val_mantissa:.{decimals}f}'[:-2]
-    uncertainty_string = f'{unc_mantissa:.{decimals}f}'[decimals:]
-    return rf'${value_string}({uncertainty_string}) \times 10^{{{expo}}}$'
+    return rf'$({val_mantissa:.{expo - ndigits}f} \pm {unc_mantissa:.{expo - ndigits}f}) \times 10^{{{expo}}}$'

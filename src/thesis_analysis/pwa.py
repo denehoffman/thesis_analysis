@@ -12,7 +12,7 @@ from numpy.typing import NDArray
 from scipy.stats import norm
 
 from thesis_analysis import colors
-from thesis_analysis.constants import GUIDED_MAX_STEPS, NUM_THREADS
+from thesis_analysis.constants import GUIDED_MAX_STEPS, NBOOT, NUM_THREADS
 from thesis_analysis.logger import logger
 from thesis_analysis.utils import Histogram
 from thesis_analysis.wave import Wave
@@ -380,11 +380,23 @@ class BinnedFitResult:
         self.data_hist_cache = data_hist
         return data_hist
 
-    def get_histograms(self) -> dict[int, Histogram]:
+    def get_histograms(
+        self, *, mc_paths: list[Path] | None = None
+    ) -> dict[int, Histogram]:
         if fit_histograms := self.fit_histograms_cache:
             return fit_histograms
         data_datasets = self.paths.get_data_datasets_binned(self.binning)
-        accmc_datasets = self.paths.get_accmc_datasets_binned(self.binning)
+        if mc_paths is None:
+            mc_datasets = self.paths.get_accmc_datasets_binned(self.binning)
+        else:
+            unbinned_mc_datasets = [
+                ld.open_amptools(path, pol_in_beam=True) for path in mc_paths
+            ]
+            res_mass = ld.Mass([2, 3])
+            mc_datasets = [
+                dataset.bin_by(res_mass, self.binning.bins, self.binning.range)
+                for dataset in unbinned_mc_datasets
+            ]
         wavesets = Wave.power_set(self.waves)
         counts: dict[int, list[float]] = {
             Wave.encode_waves(waveset): [] for waveset in wavesets
@@ -397,7 +409,7 @@ class BinnedFitResult:
                     ds_data[ibin],
                     ds_accmc[ibin],
                 )
-                for ds_data, ds_accmc in zip(data_datasets, accmc_datasets)
+                for ds_data, ds_accmc in zip(data_datasets, mc_datasets)
             ]
             for waveset in wavesets:
                 counts[Wave.encode_waves(waveset)].append(
@@ -549,7 +561,9 @@ class UnbinnedFitResult:
         self.fit_histograms_cache = histograms
         return histograms
 
-    def get_histograms(self, binning: Binning) -> dict[int, Histogram]:
+    def get_histograms(
+        self, binning: Binning, *, mc_paths: list[Path] | None = None
+    ) -> dict[int, Histogram]:
         if fit_histograms := self.fit_histograms_cache:
             hists = {
                 wave: Histogram.sum(hists)
@@ -559,7 +573,12 @@ class UnbinnedFitResult:
                 wave: hist for wave, hist in hists.items() if hist is not None
             }
         data_datasets = self.paths.get_data_datasets()
-        accmc_datasets = self.paths.get_accmc_datasets()
+        if mc_paths is None:
+            mc_datasets = self.paths.get_accmc_datasets()
+        else:
+            mc_datasets = [
+                ld.open_amptools(path, pol_in_beam=True) for path in mc_paths
+            ]
         wavesets = Wave.power_set(self.waves)
         histograms: dict[int, Histogram] = {}
         nlls = [
@@ -568,7 +587,7 @@ class UnbinnedFitResult:
                 ds_data,
                 ds_accmc,
             )
-            for ds_data, ds_accmc in zip(data_datasets, accmc_datasets)
+            for ds_data, ds_accmc in zip(data_datasets, mc_datasets)
         ]
         res_mass = ld.Mass([2, 3])
         for waveset in wavesets:
@@ -577,7 +596,7 @@ class UnbinnedFitResult:
                     np.concatenate(
                         [
                             res_mass.value_on(accmc_dataset)
-                            for accmc_dataset in accmc_datasets
+                            for accmc_dataset in mc_datasets
                         ]
                     ),
                     weights=np.concatenate(
@@ -877,8 +896,6 @@ class BinnedFitResultUncertainty:
 
 def calculate_bootstrap_uncertainty_binned(
     fit_result: BinnedFitResult,
-    *,
-    nboot: int = 30,
 ) -> BinnedFitResultUncertainty:
     data_datasets = fit_result.paths.get_data_datasets_binned(
         fit_result.binning
@@ -890,7 +907,7 @@ def calculate_bootstrap_uncertainty_binned(
     for ibin in range(fit_result.binning.bins):
         logger.info(f'Bootstrapping {ibin=}')
         bin_samples: list[NDArray[np.float64]] = []
-        for iboot in range(nboot):
+        for iboot in range(NBOOT):
             manager = ld.LikelihoodManager()
             bin_model = ld.likelihood_sum(
                 [
@@ -918,6 +935,47 @@ def calculate_bootstrap_uncertainty_binned(
         samples,
         fit_result,
         uncertainty='bootstrap',
+    )
+
+
+@dataclass
+class UnbinnedFitResultUncertainty:
+    samples: list[NDArray[np.float64]]
+    fit_result: UnbinnedFitResult
+
+
+def calculate_bootstrap_uncertainty_unbinned(
+    fit_result: UnbinnedFitResult,
+) -> UnbinnedFitResultUncertainty:
+    data_datasets = fit_result.paths.get_data_datasets()
+    accmc_datasets = fit_result.paths.get_accmc_datasets()
+    samples: list[NDArray[np.float64]] = []
+    logger.info('Bootstrapping Unbinned fit')
+    for iboot in range(NBOOT):
+        manager = ld.LikelihoodManager()
+        bin_model = ld.likelihood_sum(
+            [
+                manager.register(
+                    ld.NLL(
+                        fit_result.model,
+                        ds_data.bootstrap(iboot),
+                        ds_accmc,
+                    ).as_term()
+                )
+                for ds_data, ds_accmc in zip(data_datasets, accmc_datasets)
+            ]
+        )
+        nll = manager.load(bin_model)
+        status = nll.minimize(
+            fit_result.status.x,
+            threads=NUM_THREADS,
+            skip_hessian=True,
+        )
+        if status.converged:
+            samples.append(status.x)
+    return UnbinnedFitResultUncertainty(
+        samples,
+        fit_result,
     )
 
 

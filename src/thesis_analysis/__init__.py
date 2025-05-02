@@ -16,7 +16,9 @@ from thesis_analysis.tasks.mass_plot import MassPlot
 from thesis_analysis.tasks.pdg_plot import PDGPlot
 from thesis_analysis.tasks.rf_plot import RFPlot
 from thesis_analysis.tasks.rfl_plot import RFLPlot
+from thesis_analysis.tasks.splot_fit_report import SPlotFitReport
 from thesis_analysis.tasks.splot_report import SPlotReport
+from thesis_analysis.tasks.unbinned_fit_report import UnbinnedFitReport
 from thesis_analysis.wave import Wave
 
 
@@ -56,6 +58,27 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
             nbkg=2,
         ),
         *[
+            UnbinnedFitReport(
+                waves=waves,
+                chisqdof=chisqdof,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+                niters=5,
+                guided=guided,
+                phase_factor=True,
+                uncertainty='bootstrap',
+                bootstrap_mode='SE',
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves(
+                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+                ),
+            ]
+            for guided in [True, False]
+        ],
+        *[
             BinnedFitReport(
                 waves=waves,
                 chisqdof=chisqdof,
@@ -75,54 +98,110 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
                 Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
             ]
         ],
+        SPlotFitReport(
+            data_type='data',
+            chisqdof=chisqdof,
+            splot_method='D',
+            nsig=1,
+            nbkg=2,
+        ),
         # Fits
-        # *[
-        #     BinnedAndUnbinnedPlot(
-        #         waves=waves,
-        #         chisqdof=chisqdof,
-        #         splot_method='D',
-        #         nsig=1,
-        #         nbkg=2,
-        #         niters=5,
-        #         guided=guided,
-        #         phase_factor=True,
-        #         uncertainty='bootstrap',
-        #         bootstrap_mode='SE',
-        #     )
-        #     for waves in [
-        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-        #         Wave.encode_waves(
-        #             [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
-        #         ),
-        #     ]
-        #     for guided in [True, False]
-        # ],
-        # *[
-        #     BinnedPlot(
-        #         waves=waves,
-        #         chisqdof=chisqdof,
-        #         splot_method='D',
-        #         nsig=1,
-        #         nbkg=2,
-        #         niters=1,
-        #         phase_factor=True,
-        #         uncertainty='bootstrap',
-        #         bootstrap_mode='CI-BC',
-        #     )
-        #     for waves in [
-        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 1, '+')]),
-        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
-        #         Wave.encode_waves(
-        #             [
-        #                 Wave(0, 0, '+'),
-        #                 Wave(0, 0, '-'),
-        #                 Wave(2, 2, '+'),
-        #                 Wave(2, 2, '-'),
-        #             ]
-        #         ),
-        #     ]
-        # ],
+        *[
+            BinnedAndUnbinnedPlot(
+                waves=waves,
+                chisqdof=chisqdof,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+                niters=5,
+                guided=guided,
+                phase_factor=True,
+                uncertainty='bootstrap',
+                bootstrap_mode='SE',
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves(
+                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+                ),
+            ]
+            for guided in [True, False]
+        ],
+        *[
+            BinnedPlot(
+                waves=waves,
+                chisqdof=chisqdof,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+                niters=1,
+                phase_factor=True,
+                uncertainty='bootstrap',
+                bootstrap_mode='CI-BC',
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 1, '+')]),
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
+                Wave.encode_waves(
+                    [
+                        Wave(0, 0, '+'),
+                        Wave(0, 0, '-'),
+                        Wave(2, 2, '+'),
+                        Wave(2, 2, '-'),
+                    ]
+                ),
+            ]
+        ],
+        *[
+            BinnedAndUnbinnedPlot(
+                waves=waves,
+                chisqdof=chisqdof,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+                niters=5,
+                guided=guided,
+                phase_factor=True,
+                uncertainty='bootstrap',
+                bootstrap_mode='SE',
+                acceptance_corrected=True,
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves(
+                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+                ),
+            ]
+            for guided in [True, False]
+        ],
+        *[
+            BinnedPlot(
+                waves=waves,
+                chisqdof=chisqdof,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+                niters=1,
+                phase_factor=True,
+                uncertainty='bootstrap',
+                bootstrap_mode='CI-BC',
+                acceptance_corrected=True,
+            )
+            for waves in [
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 1, '+')]),
+                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
+                Wave.encode_waves(
+                    [
+                        Wave(0, 0, '+'),
+                        Wave(0, 0, '-'),
+                        Wave(2, 2, '+'),
+                        Wave(2, 2, '-'),
+                    ]
+                ),
+            ]
+        ],
     ]
 
 

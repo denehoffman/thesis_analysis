@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 
 from thesis_analysis import colors
-from thesis_analysis.constants import NBINS
+from thesis_analysis.constants import NBINS, RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     BinnedFitResultUncertainty,
@@ -16,6 +16,7 @@ from thesis_analysis.pwa import (
 from thesis_analysis.tasks.binned_fit_uncertainty import BinnedFitUncertainty
 from thesis_analysis.tasks.binned_plot import BinnedPlot
 from thesis_analysis.tasks.guided_plot import GuidedPlot
+from thesis_analysis.tasks.pol_gen import PolarizeGenerated
 from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 from thesis_analysis.tasks.unbinned_plot import UnbinnedPlot
 from thesis_analysis.wave import Wave
@@ -34,6 +35,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
     uncertainty = luigi.Parameter(default='bootstrap')
     bootstrap_mode = luigi.Parameter(default='SE')
     bootstrap_mode_plot = luigi.Parameter(default='CI-BC')
+    acceptance_corrected = luigi.BoolParameter(default=False)
 
     @override
     def requires(self):
@@ -70,6 +72,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.phase_factor,
                 self.uncertainty,
                 self.bootstrap_mode_plot,
+                self.acceptance_corrected,
             ),
             UnbinnedPlot(
                 self.waves,
@@ -82,6 +85,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                 self.phase_factor,
                 self.uncertainty,
                 self.bootstrap_mode,
+                self.acceptance_corrected,
             ),
         ]
         if self.guided:
@@ -98,6 +102,11 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                     self.bootstrap_mode,
                 )
             ]
+        if self.acceptance_corrected:
+            reqs += [
+                PolarizeGenerated(run_period=run_period)
+                for run_period in RUN_PERIODS
+            ]
         return reqs
 
     @override
@@ -105,7 +114,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{f"-{self.bootstrap_mode}" if str(self.uncertainty) == "bootstrap" else ""}.png'
+                / f'binned_and_unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{f"-{self.bootstrap_mode}" if str(self.uncertainty) == "bootstrap" else ""}{"_acc" if self.acceptance_corrected else ""}.png'
             ),
         ]
 
@@ -116,6 +125,15 @@ class BinnedAndUnbinnedPlot(luigi.Task):
 
         output_plot_path = Path(str(self.output()[0].path))
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if self.acceptance_corrected:
+            input_len = len(self.input())
+            genmc_paths = [
+                Path(str(self.input()[input_len - len(RUN_PERIODS) + i][0]))
+                for i in range(len(RUN_PERIODS))
+            ]
+        else:
+            genmc_paths = None
 
         binned_fit_result: BinnedFitResultUncertainty = pickle.load(
             binned_fit_path.open('rb')
@@ -131,9 +149,11 @@ class BinnedAndUnbinnedPlot(luigi.Task):
 
         # Binned Plot
         data_hist = binned_fit_result.fit_result.get_data_histogram()
-        fit_hists = binned_fit_result.fit_result.get_histograms()
+        fit_hists = binned_fit_result.fit_result.get_histograms(
+            mc_paths=genmc_paths
+        )
         unbinned_fit_hists = unbinned_fit_result.get_histograms(
-            binned_fit_result.fit_result.binning
+            binned_fit_result.fit_result.binning, mc_paths=genmc_paths
         )
         fit_error_bars = binned_fit_result.get_error_bars(
             bootstrap_mode=bootstrap_mode
@@ -146,12 +166,13 @@ class BinnedAndUnbinnedPlot(luigi.Task):
                         Wave.decode_waves(waves), (i, j)
                     ):
                         continue
-                    ax[i][j].stairs(
-                        data_hist.counts,
-                        data_hist.bins,
-                        color=colors.black,
-                        label='Data',
-                    )
+                    if not self.acceptance_corrected:
+                        ax[i][j].stairs(
+                            data_hist.counts,
+                            data_hist.bins,
+                            color=colors.black,
+                            label='Data',
+                        )
                     fit_hist = fit_hists[waves]
                     centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2
                     ax[i][j].errorbar(
@@ -223,12 +244,13 @@ class BinnedAndUnbinnedPlot(luigi.Task):
         else:
             fig, ax = plt.subplots(ncols=2, sharey=True)
             for i in {0, 1}:
-                ax[i].stairs(
-                    data_hist.counts,
-                    data_hist.bins,
-                    color=colors.black,
-                    label='Data',
-                )
+                if not self.acceptance_corrected:
+                    ax[i].stairs(
+                        data_hist.counts,
+                        data_hist.bins,
+                        color=colors.black,
+                        label='Data',
+                    )
                 fit_hist = fit_hists[waves]
                 err = fit_error_bars[waves]
                 centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2

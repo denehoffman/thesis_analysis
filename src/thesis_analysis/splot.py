@@ -12,6 +12,11 @@ from thesis_analysis.logger import logger
 from thesis_analysis.utils import FitResult, Histogram
 
 
+def splot_method_rename(method: str) -> str:
+    """Renames sPlot methods (I changed the convention later for the paper and didn't want to rename a bunch of files)"""
+    return {'A': 'C', 'B': 'D', 'C': 'E', 'D': 'A', 'E': 'B'}[method]
+
+
 def density_hist_to_pdf(
     counts: NDArray[np.float32], bin_edges: NDArray[np.float32]
 ) -> Callable[[NDArray[np.float32]], NDArray[np.float32]]:

@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 
 from thesis_analysis import colors
-from thesis_analysis.constants import NBINS
+from thesis_analysis.constants import NBINS, RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import (
     BinnedFitResultUncertainty,
 )
 from thesis_analysis.tasks.binned_fit_uncertainty import BinnedFitUncertainty
+from thesis_analysis.tasks.pol_gen import PolarizeGenerated
 from thesis_analysis.wave import Wave
 
 
@@ -27,10 +28,11 @@ class BinnedPlot(luigi.Task):
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
     bootstrap_mode = luigi.Parameter(default='CI-BC')
+    acceptance_corrected = luigi.BoolParameter(default=False)
 
     @override
     def requires(self):
-        return [
+        reqs = [
             BinnedFitUncertainty(
                 self.waves,
                 self.chisqdof,
@@ -42,19 +44,32 @@ class BinnedPlot(luigi.Task):
                 self.uncertainty,
             ),
         ]
+        if self.acceptance_corrected:
+            reqs += [
+                PolarizeGenerated(run_period=run_period)
+                for run_period in RUN_PERIODS
+            ]
+        return reqs
 
     @override
     def output(self):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{f"-{self.bootstrap_mode}" if str(self.uncertainty) == "bootstrap" else ""}.png'
+                / f'binned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{f"-{self.bootstrap_mode}" if str(self.uncertainty) == "bootstrap" else ""}{"_acc" if self.acceptance_corrected else ""}.png'
             ),
         ]
 
     @override
     def run(self):
         binned_fit_path = Path(str(self.input()[0][0]))
+        if self.acceptance_corrected:
+            genmc_paths = [
+                Path(str(self.input()[i + 1][0]))
+                for i in range(len(RUN_PERIODS))
+            ]
+        else:
+            genmc_paths = None
 
         output_plot_path = Path(str(self.output()[0].path))
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +82,7 @@ class BinnedPlot(luigi.Task):
 
         mpl_style.use('thesis_analysis.thesis')
         data_hist = fit_result.fit_result.get_data_histogram()
-        fit_hists = fit_result.fit_result.get_histograms()
+        fit_hists = fit_result.fit_result.get_histograms(mc_paths=genmc_paths)
         fit_error_bars = fit_result.get_error_bars(
             bootstrap_mode=bootstrap_mode
         )
@@ -79,12 +94,13 @@ class BinnedPlot(luigi.Task):
                         Wave.decode_waves(waves), (i, j)
                     ):
                         continue
-                    ax[i][j].stairs(
-                        data_hist.counts,
-                        data_hist.bins,
-                        color=colors.black,
-                        label='Data',
-                    )
+                    if not self.acceptance_corrected:
+                        ax[i][j].stairs(
+                            data_hist.counts,
+                            data_hist.bins,
+                            color=colors.black,
+                            label='Data',
+                        )
                     fit_hist = fit_hists[waves]
                     err = fit_error_bars[waves]
                     centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2
@@ -150,12 +166,13 @@ class BinnedPlot(luigi.Task):
         else:
             fig, ax = plt.subplots(ncols=2, sharey=True)
             for i in {0, 1}:
-                ax[i].stairs(
-                    data_hist.counts,
-                    data_hist.bins,
-                    color=colors.black,
-                    label='Data',
-                )
+                if not self.acceptance_corrected:
+                    ax[i].stairs(
+                        data_hist.counts,
+                        data_hist.bins,
+                        color=colors.black,
+                        label='Data',
+                    )
                 fit_hist = fit_hists[waves]
                 err = fit_error_bars[waves]
                 centers = (fit_hist.bins[1:] + fit_hist.bins[:-1]) / 2

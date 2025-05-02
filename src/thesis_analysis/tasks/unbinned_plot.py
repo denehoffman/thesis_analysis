@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
 
 from thesis_analysis import colors
-from thesis_analysis.constants import NBINS, RANGE
+from thesis_analysis.constants import NBINS, RANGE, RUN_PERIODS
 from thesis_analysis.paths import Paths
 from thesis_analysis.pwa import Binning, UnbinnedFitResult
+from thesis_analysis.tasks.pol_gen import PolarizeGenerated
 from thesis_analysis.tasks.unbinned_fit import UnbinnedFit
 from thesis_analysis.wave import Wave
 
@@ -26,10 +27,11 @@ class UnbinnedPlot(luigi.Task):
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
     bootstrap_mode = luigi.Parameter(default='SE')
+    acceptance_corrected = luigi.BoolParameter(default=False)
 
     @override
     def requires(self):
-        return [
+        reqs = [
             UnbinnedFit(
                 self.waves,
                 self.chisqdof,
@@ -43,19 +45,32 @@ class UnbinnedPlot(luigi.Task):
                 self.bootstrap_mode,
             ),
         ]
+        if self.acceptance_corrected:
+            reqs += [
+                PolarizeGenerated(run_period=run_period)
+                for run_period in RUN_PERIODS
+            ]
+        return reqs
 
     @override
     def output(self):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.png'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}{"_acc" if self.acceptance_corrected else ""}.png'
             ),
         ]
 
     @override
     def run(self):
         unbinned_fit_path = Path(str(self.input()[0][0]))
+        if self.acceptance_corrected:
+            genmc_paths = [
+                Path(str(self.input()[i + 1][0]))
+                for i in range(len(RUN_PERIODS))
+            ]
+        else:
+            genmc_paths = None
 
         output_plot_path = Path(str(self.output()[0].path))
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +82,9 @@ class UnbinnedPlot(luigi.Task):
 
         mpl_style.use('thesis_analysis.thesis')
         data_hist = fit_result.get_data_histogram(Binning(NBINS, RANGE))
-        fit_hists = fit_result.get_histograms(Binning(NBINS, RANGE))
+        fit_hists = fit_result.get_histograms(
+            Binning(NBINS, RANGE), mc_paths=genmc_paths
+        )
         if Wave.needs_full_plot(Wave.decode_waves(waves)):
             fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
             for i in {0, 1}:
@@ -76,19 +93,13 @@ class UnbinnedPlot(luigi.Task):
                         Wave.decode_waves(waves), (i, j)
                     ):
                         continue
-                    ax[i][j].stairs(
-                        data_hist.counts,
-                        data_hist.bins,
-                        color=colors.black,
-                        label='Data',
-                    )
-            # Unbinned Plot
-            for i in {0, 1}:
-                for j in {0, 1, 2}:
-                    if not Wave.has_wave_at_index(
-                        Wave.decode_waves(waves), (i, j)
-                    ):
-                        continue
+                    if not self.acceptance_corrected:
+                        ax[i][j].stairs(
+                            data_hist.counts,
+                            data_hist.bins,
+                            color=colors.black,
+                            label='Data',
+                        )
                     ax[i][j].stairs(
                         fit_hists[waves].counts,
                         fit_hists[waves].bins,
@@ -133,14 +144,13 @@ class UnbinnedPlot(luigi.Task):
         else:
             fig, ax = plt.subplots(ncols=2, sharey=True)
             for i in {0, 1}:
-                ax[i].stairs(
-                    data_hist.counts,
-                    data_hist.bins,
-                    color=colors.black,
-                    label='Data',
-                )
-            # Unbinned Plot
-            for i in {0, 1}:
+                if not self.acceptance_corrected:
+                    ax[i].stairs(
+                        data_hist.counts,
+                        data_hist.bins,
+                        color=colors.black,
+                        label='Data',
+                    )
                 ax[i].stairs(
                     fit_hists[waves].counts,
                     fit_hists[waves].bins,

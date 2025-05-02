@@ -16,3 +16,4 @@ luigi.pid
 slurm.log
 
 .DS_Store
+*.svg
