@@ -189,11 +189,11 @@ class Wave:
 
     @property
     def latex(self) -> str:
-        return f'${self.letter}_{{{"+" if self.m >= 0 else "-"}{abs(self.m)}}}^{{({self.r})}}$'
+        return f'${self.letter}_{{{"+" if self.m > 0 else ("-" if self.m < 0 else "")}{abs(self.m)}}}^{{({self.r})}}$'
 
     @property
     def latex_group(self) -> str:
-        return f'${self.letter}_{{{"+" if self.m >= 0 else "-"}{abs(self.m)}}}$'
+        return f'${self.letter}_{{{"+" if self.m > 0 else ("-" if self.m < 0 else "")}{abs(self.m)}}}$'
 
     def zlm(self, manager: ld.Manager) -> ld.amplitudes.AmplitudeID:
         angles = ld.Angles(0, [1], [2], [2, 3])

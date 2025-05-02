@@ -2,16 +2,18 @@ from typing import override
 
 import luigi
 
+from thesis_analysis.constants import NBINS
 from thesis_analysis.tasks.aux_plots import MakeAuxiliaryPlots
 from thesis_analysis.tasks.bggen import BGGENPlots
 from thesis_analysis.tasks.binned_and_unbinned_plot import BinnedAndUnbinnedPlot
+from thesis_analysis.tasks.binned_fit_report import BinnedFitReport
 from thesis_analysis.tasks.binned_plot import BinnedPlot
-from thesis_analysis.tasks.binned_regularized_plot import BinnedRegularizedPlot
 from thesis_analysis.tasks.chisqdof_plot import ChiSqDOFPlot
 from thesis_analysis.tasks.costheta_plot import CosThetaPlot
 from thesis_analysis.tasks.cut_plots_combined import CutPlotsCombined
 from thesis_analysis.tasks.factorization_report import FactorizationReport
 from thesis_analysis.tasks.mass_plot import MassPlot
+from thesis_analysis.tasks.pdg_plot import PDGPlot
 from thesis_analysis.tasks.rf_plot import RFPlot
 from thesis_analysis.tasks.rfl_plot import RFLPlot
 from thesis_analysis.tasks.splot_report import SPlotReport
@@ -53,30 +55,8 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
             nsig=1,
             nbkg=2,
         ),
-        # Fits
         *[
-            BinnedAndUnbinnedPlot(
-                waves=waves,
-                chisqdof=chisqdof,
-                splot_method='D',
-                nsig=1,
-                nbkg=2,
-                niters=5,
-                guided=guided,
-                phase_factor=True,
-                uncertainty='bootstrap',
-                bootstrap_mode='SE',
-            )
-            for waves in [
-                Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
-                Wave.encode_waves(
-                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
-                ),
-            ]
-            for guided in [True, False]
-        ],
-        *[
-            BinnedPlot(
+            BinnedFitReport(
                 waves=waves,
                 chisqdof=chisqdof,
                 splot_method='D',
@@ -85,14 +65,64 @@ def run_all(chisqdof: float) -> list[luigi.Task]:
                 niters=1,
                 phase_factor=True,
                 uncertainty='bootstrap',
-                bootstrap_mode='CI-BC',
             )
             for waves in [
                 Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+                Wave.encode_waves(
+                    [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+                ),
                 Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 1, '+')]),
                 Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
             ]
         ],
+        # Fits
+        # *[
+        #     BinnedAndUnbinnedPlot(
+        #         waves=waves,
+        #         chisqdof=chisqdof,
+        #         splot_method='D',
+        #         nsig=1,
+        #         nbkg=2,
+        #         niters=5,
+        #         guided=guided,
+        #         phase_factor=True,
+        #         uncertainty='bootstrap',
+        #         bootstrap_mode='SE',
+        #     )
+        #     for waves in [
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #         Wave.encode_waves(
+        #             [Wave(0, 0, '+'), Wave(0, 0, '-'), Wave(2, 2, '+')]
+        #         ),
+        #     ]
+        #     for guided in [True, False]
+        # ],
+        # *[
+        #     BinnedPlot(
+        #         waves=waves,
+        #         chisqdof=chisqdof,
+        #         splot_method='D',
+        #         nsig=1,
+        #         nbkg=2,
+        #         niters=1,
+        #         phase_factor=True,
+        #         uncertainty='bootstrap',
+        #         bootstrap_mode='CI-BC',
+        #     )
+        #     for waves in [
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 2, '+')]),
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 1, '+')]),
+        #         Wave.encode_waves([Wave(0, 0, '+'), Wave(2, 0, '+')]),
+        #         Wave.encode_waves(
+        #             [
+        #                 Wave(0, 0, '+'),
+        #                 Wave(0, 0, '-'),
+        #                 Wave(2, 2, '+'),
+        #                 Wave(2, 2, '-'),
+        #             ]
+        #         ),
+        #     ]
+        # ],
     ]
 
 
@@ -100,11 +130,11 @@ class RunAll(luigi.WrapperTask):
     @override
     def requires(self):
         return [
-            *run_all(1.4),
-            *run_all(2.4),
+            # *run_all(1.4),
+            # *run_all(2.4),
             *run_all(3.4),
-            *run_all(4.4),
-            *run_all(5.4),
+            # *run_all(4.4),
+            # *run_all(5.4),
             MakeAuxiliaryPlots(),
             BGGENPlots(run_period='s18'),
             CutPlotsCombined(data_type='data_original'),
@@ -120,4 +150,13 @@ class RunAll(luigi.WrapperTask):
             CutPlotsCombined(data_type='data'),
             FactorizationReport(3.4, max_quantiles=4),
             SPlotReport(3.4, nsig_max=1, nbkg_max=4),
+            PDGPlot(
+                data_type='data',
+                bins=NBINS,
+                original=False,
+                chisqdof=3.4,
+                splot_method='D',
+                nsig=1,
+                nbkg=2,
+            ),
         ]
