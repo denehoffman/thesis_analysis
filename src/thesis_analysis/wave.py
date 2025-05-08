@@ -227,9 +227,8 @@ class Wave:
             )
 
     @staticmethod
-    def kmatrix_parameter_name_to_latex(par_name: str) -> str:
+    def kmatrix_parameter_name_to_latex_parts(par_name: str) -> tuple[str, str]:
         name, real_imag = par_name.split(' ')
-        real = r'\Re' if real_imag == 'real' else r'\Im'
         isospin = name[0]
         spin = int(name[1])
         mass = name[2:].split(')(')[0].replace('(', '')
@@ -239,7 +238,7 @@ class Wave:
         r = subinfo[-1]
         letter = {0: 'S', 1: 'P', 2: 'D', 3: 'F'}.get(spin, '?')
         wave = f'{letter}_{{{"+" if m > 0 else ("-" if m < 0 else "")}{abs(m)}}}^{{({r})}}'
-        return rf'${real}\left[{isospin}_{{{spin}}}{prime}({mass})\right] \left({wave}\right)$'
+        return (rf'${isospin}_{{{spin}}}{prime}({mass})$', rf'${wave}$')
 
     def kmatrix(self, manager: ld.Manager) -> list[ld.amplitudes.AmplitudeID]:
         res_mass = ld.Mass([2, 3])

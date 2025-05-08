@@ -71,7 +71,7 @@ class CutPlots(luigi.Task):
             get_branch('MM2'),
         ]
         data = [
-            root_io.get_branches(input_path, branches)
+            root_io.get_branches(input_path, branches, root=False)
             for input_path in input_paths
         ]
         flat_data = {

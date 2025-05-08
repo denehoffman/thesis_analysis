@@ -47,35 +47,20 @@ class RFLPlot(luigi.Task):
         output_plot_path = Path(self.output()[0].path)
         output_plot_path.parent.mkdir(parents=True, exist_ok=True)
 
-        data_dfs = {
-            i: root_io.get_branches(
-                input_paths[i],
-                [
-                    get_branch('RFL1'),
-                    get_branch('RFL2'),
-                    get_branch('Weight'),
-                ],
-            )
-            for i in range(len(RUN_PERIODS))
-        }
-        data_df = {
-            'RFL1': np.concatenate(
-                [data_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
-            ),
-            'RFL2': np.concatenate(
-                [data_dfs[i]['RFL2'] for i in range(len(RUN_PERIODS))]
-            ),
-            'Weight': np.concatenate(
-                [data_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
-            ),
-        }
-
+        branches = [
+            get_branch('RFL1'),
+            get_branch('RFL2'),
+            get_branch('Weight'),
+        ]
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         nbins = 100
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         ax.hist(
-            data_df['RFL1'],
-            weights=data_df['Weight'],
+            flat_data['RFL1'],
+            weights=flat_data['Weight'],
             bins=nbins,
             range=(0.0, 0.2),
             color=colors.blue,

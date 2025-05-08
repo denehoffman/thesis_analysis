@@ -5,6 +5,7 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+import numpy as np
 
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
@@ -100,7 +101,9 @@ class MassPlot(luigi.Task):
 
     @override
     def run(self):
-        input_path = Path(self.input()[0][0].path)
+        input_paths = [
+            Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
+        ]
         output_path = self.output()[0].path
 
         bins = int(self.bins)  # pyright:ignore[reportArgumentType]
@@ -110,12 +113,14 @@ class MassPlot(luigi.Task):
             get_branch('Weight'),
         ]
 
-        data = root_io.get_branches(input_path, branches)
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         ax.hist(
-            data['M_Resonance'],
-            weights=data['Weight'],
+            flat_data['M_Resonance'],
+            weights=flat_data['Weight'],
             bins=bins,
             range=(1.0, 2.0),
             color=colors.blue,

@@ -5,6 +5,7 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+import numpy as np
 
 import thesis_analysis.colors as colors
 from thesis_analysis import root_io
@@ -95,7 +96,9 @@ class ChiSqDOFPlot(luigi.Task):
 
     @override
     def run(self):
-        input_path = Path(self.input()[0][0].path)
+        input_paths = [
+            Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
+        ]
         output_path = self.output()[0].path
 
         bins = int(self.bins)  # pyright:ignore[reportArgumentType]
@@ -104,8 +107,9 @@ class ChiSqDOFPlot(luigi.Task):
             get_branch('ChiSqDOF'),
             get_branch('Weight'),
         ]
-
-        data = root_io.get_branches(input_path, branches)
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         max_range = (
@@ -119,8 +123,8 @@ class ChiSqDOFPlot(luigi.Task):
         )
 
         ax.hist(
-            data['ChiSqDOF'],
-            weights=data['Weight'],
+            flat_data['ChiSqDOF'],
+            weights=flat_data['Weight'],
             bins=bins,
             range=(0.0, max_range),
             color=colors.blue,

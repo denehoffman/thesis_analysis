@@ -30,6 +30,7 @@ class SingleBinnedPlot(luigi.Task):
     niters = luigi.IntParameter(default=3, significant=False)
     phase_factor = luigi.BoolParameter(default=False)
     uncertainty = luigi.Parameter(default='bootstrap')
+    bootstrap_mode = luigi.Parameter(default='CI-BC')
     acceptance_corrected = luigi.BoolParameter(default=False)
 
     @override
@@ -75,14 +76,14 @@ class SingleBinnedPlot(luigi.Task):
             binned_fit_path.open('rb')
         )
         waves = int(self.waves)  # pyright:ignore[reportArgumentType]
+        bootstrap_mode = str(self.bootstrap_mode)
 
         mpl_style.use('thesis_analysis.thesis')
         data_hist = fit_result.fit_result.get_data_histogram()
         fit_hists = fit_result.fit_result.get_histograms(mc_paths=genmc_paths)
-        print('available wavesets:')
-        for wave in fit_hists.keys():
-            print(Wave.decode_waves(wave))
-        fit_error_bars = fit_result.get_error_bars()
+        fit_error_bars = fit_result.get_error_bars(
+            bootstrap_mode=bootstrap_mode, mc_paths=genmc_paths
+        )
         if Wave.needs_full_plot(Wave.decode_waves(waves)):
             fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)
             for i in {0, 1}:

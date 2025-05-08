@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import final, override
+from typing import Any, final, override
 
+import laddu as ld
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
@@ -11,6 +12,7 @@ from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
     DATA_TYPE_TO_LATEX,
     RUN_PERIODS,
+    RootBranchDict,
     get_branch,
 )
 from thesis_analysis.logger import logger
@@ -24,6 +26,7 @@ class CutPlotsCombined(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.OptionalFloatParameter(None)
     protonz = luigi.OptionalBoolParameter(False)
+    ksb_costheta = luigi.OptionalFloatParameter(None)
 
     @override
     def requires(self):
@@ -63,27 +66,51 @@ class CutPlotsCombined(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_chisqdof{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_chisqdof{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_chisqdof_youden_j{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_chisqdof_youden_j{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_chisqdof_roc{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_chisqdof_roc{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_protonz{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_protonz{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_rfl{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_rfl{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'{self.data_type}_combined_mm2{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'{self.data_type}_combined_mm2{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_ksbp{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_ksks{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_ksb_costheta{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_ksb_costheta_v_ksbp{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_ksb_costheta_v_ksks{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
+            ),
+            luigi.LocalTarget(
+                Paths.plots
+                / f'{self.data_type}_combined_me{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{"_ksb_costheta_{self.ksb_costheta:.2f}" if self.ksb_costheta is not None else ""}.png'
             ),
         ]
 
@@ -109,43 +136,37 @@ class CutPlotsCombined(luigi.Task):
         output_path_protonz = self.output()[3].path
         output_path_rfl = self.output()[4].path
         output_path_mm2 = self.output()[5].path
+        output_path_ksbp = self.output()[6].path
+        output_path_ksks = self.output()[7].path
+        output_path_ksb_costheta = self.output()[8].path
+        output_path_ksbp_costheta_v_ksbp = self.output()[9].path
+        output_path_ksbp_costheta_v_ksks = self.output()[10].path
+        output_path_me = self.output()[11].path
 
         branches = [
+            get_branch('E_FinalState', dim=3),
+            get_branch('Px_FinalState', dim=3),
+            get_branch('Py_FinalState', dim=3),
+            get_branch('Pz_FinalState', dim=3),
             get_branch('ChiSqDOF'),
             get_branch('Proton_Z'),
             get_branch('RFL1'),
             get_branch('MM2'),
+            get_branch('ME'),
         ]
-        df_data = [
-            root_io.get_branches(input_path, branches)
-            for input_path in input_paths_data
-        ]
-        flat_data = {
-            branch.name: np.concatenate(
-                [df_data[i][branch.name] for i in range(len(RUN_PERIODS))]
-            )
-            for branch in branches
-        }
-        df_sigmc = [
-            root_io.get_branches(input_path, branches)
-            for input_path in input_paths_sigmc
-        ]
-        flat_sigmc = {
-            branch.name: np.concatenate(
-                [df_sigmc[i][branch.name] for i in range(len(RUN_PERIODS))]
-            )
-            for branch in branches
-        }
-        df_bkgmc = [
-            root_io.get_branches(input_path, branches)
-            for input_path in input_paths_bkgmc
-        ]
-        flat_bkgmc = {
-            branch.name: np.concatenate(
-                [df_bkgmc[i][branch.name] for i in range(len(RUN_PERIODS))]
-            )
-            for branch in branches
-        }
+        flat_data = root_io.concatenate_branches(
+            input_paths_data, branches, root=False
+        )
+        flat_data = get_fs_branches(flat_data)
+
+        flat_sigmc = root_io.concatenate_branches(
+            input_paths_sigmc, branches, root=False
+        )
+        flat_sigmc = get_fs_branches(flat_sigmc)
+        flat_bkgmc = root_io.concatenate_branches(
+            input_paths_bkgmc, branches, root=False
+        )
+        flat_bkgmc = get_fs_branches(flat_bkgmc)
 
         if self.chisqdof is not None:
             mask_data = flat_data['ChiSqDOF'] <= float(self.chisqdof)
@@ -174,6 +195,17 @@ class CutPlotsCombined(luigi.Task):
                 np.logical_and(
                     flat_bkgmc['Proton_Z'] >= 50, flat_bkgmc['Proton_Z'] <= 80
                 ),
+            )
+        if self.ksb_costheta is not None:
+            logger.debug(f'KsB Cut is not None! ({self.ksb_costheta})')
+            mask_data = flat_data['KShortB_CosTheta'] <= float(
+                self.ksb_costheta
+            )
+            mask_sigmc = flat_sigmc['KShortB_CosTheta'] <= float(
+                self.ksb_costheta
+            )
+            mask_bkgmc = flat_bkgmc['KShortB_CosTheta'] <= float(
+                self.ksb_costheta
             )
 
         mpl_style.use('thesis_analysis.thesis')
@@ -409,3 +441,357 @@ class CutPlotsCombined(luigi.Task):
         ax.legend()
         fig.savefig(output_path_mm2)
         plt.close()
+
+        # KShort_B + Proton
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist(
+            flat_data['M_KShortB_Proton'][mask_data],
+            bins=bins,
+            range=(1.4, 3.7),
+            color=colors.blue,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[self.data_type],
+        )
+        ax.hist(
+            flat_sigmc['M_KShortB_Proton'][mask_sigmc],
+            bins=bins,
+            range=(1.4, 3.7),
+            color=colors.green,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        )
+        ax.hist(
+            flat_bkgmc['M_KShortB_Proton'][mask_bkgmc],
+            bins=bins,
+            range=(1.4, 3.7),
+            color=colors.red,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        )
+        ax.set_xlabel('Invariant Mass of $K_{S,B}^0 p$')
+        bin_width = 1.0 / bins
+        ax.set_ylabel(f'Normalized Counts / {bin_width:.2f}')
+        # ax.set_yscale('log')
+        ax.legend()
+        fig.savefig(output_path_ksbp)
+        plt.close()
+
+        # KShort1 + KShort2
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist(
+            flat_data['M_KShort1_KShort2'][mask_data],
+            bins=bins,
+            range=(0.9, 3.0),
+            color=colors.blue,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[self.data_type],
+        )
+        ax.hist(
+            flat_sigmc['M_KShort1_KShort2'][mask_sigmc],
+            bins=bins,
+            range=(0.9, 3.0),
+            color=colors.green,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        )
+        ax.hist(
+            flat_bkgmc['M_KShort1_KShort2'][mask_bkgmc],
+            bins=bins,
+            range=(0.9, 3.0),
+            color=colors.red,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        )
+        ax.set_xlabel('Invariant Mass of $K_{S,1}^0 K_{S,2}^0$')
+        bin_width = 1.0 / bins
+        ax.set_ylabel(f'Normalized Counts / {bin_width:.2f}')
+        # ax.set_yscale('log')
+        ax.legend()
+        fig.savefig(output_path_ksks)
+        plt.close()
+
+        # KShort_B CosTheta
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist(
+            flat_data['KShortB_CosTheta'][mask_data],
+            bins=bins,
+            range=(-1, 1),
+            color=colors.blue,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[self.data_type],
+        )
+        ax.hist(
+            flat_sigmc['KShortB_CosTheta'][mask_sigmc],
+            bins=bins,
+            range=(-1, 1),
+            color=colors.green,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        )
+        ax.hist(
+            flat_bkgmc['KShortB_CosTheta'][mask_bkgmc],
+            bins=bins,
+            range=(-1, 1),
+            color=colors.red,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        )
+        ax.set_xlabel(r'$\cos\theta$ of $K_{S,B}^0$')
+        bin_width = 1.0 / bins
+        ax.set_ylabel(f'Normalized Counts / {bin_width:.2f}')
+        ax.legend()
+        fig.savefig(output_path_ksb_costheta)
+        plt.close()
+
+        # KShort_B + Proton v KShort_B CosTheta
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist2d(
+            flat_data['M_KShortB_Proton'][mask_data],
+            flat_data['KShortB_CosTheta'][mask_data],
+            bins=bins,
+            range=[(1.4, 3.7), (-1, 1)],
+        )
+        # ax.hist(
+        #     flat_sigmc['M_KShortB_Proton'][mask_sigmc],
+        #     bins=bins,
+        #     range=(1.4, 3.7),
+        #     color=colors.green,
+        #     histtype='step',
+        #     density=True,
+        #     label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        # )
+        # ax.hist(
+        #     flat_bkgmc['M_KShortB_Proton'][mask_bkgmc],
+        #     bins=bins,
+        #     range=(1.4, 3.7),
+        #     color=colors.red,
+        #     histtype='step',
+        #     density=True,
+        #     label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        # )
+        ax.set_xlabel('Invariant Mass of $K_{S,B}^0 p$')
+        ax.set_ylabel(r'$\cos\theta$ of $K_{S,B}^0$')
+        fig.savefig(output_path_ksbp_costheta_v_ksbp)
+        plt.close()
+
+        # KShort1 + KShort2 v KShort_B CosTheta
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist2d(
+            flat_data['M_KShort1_KShort2'][mask_data],
+            flat_data['KShortB_CosTheta'][mask_data],
+            bins=bins,
+            range=[(0.9, 3.0), (-1, 1)],
+        )
+        # ax.hist(
+        #     flat_sigmc['M_KShortB_Proton'][mask_sigmc],
+        #     bins=bins,
+        #     range=(1.4, 3.7),
+        #     color=colors.green,
+        #     histtype='step',
+        #     density=True,
+        #     label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        # )
+        # ax.hist(
+        #     flat_bkgmc['M_KShortB_Proton'][mask_bkgmc],
+        #     bins=bins,
+        #     range=(1.4, 3.7),
+        #     color=colors.red,
+        #     histtype='step',
+        #     density=True,
+        #     label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        # )
+        ax.set_xlabel('Invariant Mass of $K_{S,B}^0 p$')
+        ax.set_ylabel(r'$\cos\theta$ of $K_{S,B}^0$')
+        fig.savefig(output_path_ksbp_costheta_v_ksks)
+        plt.close()
+
+        # ME (missing energy)
+        fig, ax = plt.subplots()
+        bins = 100
+        ax.hist(
+            flat_data['ME'][mask_data],
+            bins=bins,
+            range=(-0.1, 0.1),
+            color=colors.blue,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[self.data_type],
+        )
+        ax.hist(
+            flat_sigmc['ME'][mask_sigmc],
+            bins=bins,
+            range=(-0.1, 0.1),
+            color=colors.green,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_sigmc],
+        )
+        ax.hist(
+            flat_bkgmc['ME'][mask_bkgmc],
+            bins=bins,
+            range=(-0.1, 0.1),
+            color=colors.red,
+            histtype='step',
+            density=True,
+            label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
+        )
+        ax.set_xlabel('Missing Energy')
+        bin_width = 1.0 / bins
+        ax.set_ylabel(f'Normalized Counts / {bin_width:.2f}')
+        ax.set_yscale('log')
+        ax.legend()
+        fig.savefig(output_path_me)
+        plt.close()
+
+
+def get_pion_branches(
+    flat_data: dict[str, np.typing.NDArray[Any]],
+) -> dict[str, np.typing.NDArray[Any]]:
+    flat_data['PiPlus1_P4'] = np.array(
+        [
+            ld.Vector4(px, py, pz, e)
+            for px, py, pz, e in zip(
+                flat_data['Px_PiPlus1'],
+                flat_data['Py_PiPlus1'],
+                flat_data['Pz_PiPlus1'],
+                flat_data['E_PiPlus1'],
+            )
+        ]
+    )
+    flat_data['PiMinus1_P4'] = np.array(
+        [
+            ld.Vector4(px, py, pz, e)
+            for px, py, pz, e in zip(
+                flat_data['Px_PiMinus1'],
+                flat_data['Py_PiMinus1'],
+                flat_data['Pz_PiMinus1'],
+                flat_data['E_PiMinus1'],
+            )
+        ]
+    )
+    flat_data['PiPlus2_P4'] = np.array(
+        [
+            ld.Vector4(px, py, pz, e)
+            for px, py, pz, e in zip(
+                flat_data['Px_PiPlus2'],
+                flat_data['Py_PiPlus2'],
+                flat_data['Pz_PiPlus2'],
+                flat_data['E_PiPlus2'],
+            )
+        ]
+    )
+    flat_data['PiMinus2_P4'] = np.array(
+        [
+            ld.Vector4(px, py, pz, e)
+            for px, py, pz, e in zip(
+                flat_data['Px_PiMinus2'],
+                flat_data['Py_PiMinus2'],
+                flat_data['Pz_PiMinus2'],
+                flat_data['E_PiMinus2'],
+            )
+        ]
+    )
+    return flat_data
+
+
+def get_fs_branches(
+    flat_data: RootBranchDict,
+) -> dict[str, np.typing.NDArray[Any]]:
+    flat_data: dict[str, np.typing.NDArray[Any]] = dict(flat_data)  # pyright:ignore[reportAssignmentType]
+    flat_data['Proton_P4'] = np.array(
+        [
+            ld.Vector4(px[0], py[0], pz[0], e[0])
+            for px, py, pz, e in zip(
+                flat_data['Px_FinalState'],
+                flat_data['Py_FinalState'],
+                flat_data['Pz_FinalState'],
+                flat_data['E_FinalState'],
+            )
+        ]
+    )
+    flat_data['KShort1_P4'] = np.array(
+        [
+            ld.Vector4(px[1], py[1], pz[1], e[1])
+            for px, py, pz, e in zip(
+                flat_data['Px_FinalState'],
+                flat_data['Py_FinalState'],
+                flat_data['Pz_FinalState'],
+                flat_data['E_FinalState'],
+            )
+        ]
+    )
+    flat_data['KShort2_P4'] = np.array(
+        [
+            ld.Vector4(px[2], py[2], pz[2], e[2])
+            for px, py, pz, e in zip(
+                flat_data['Px_FinalState'],
+                flat_data['Py_FinalState'],
+                flat_data['Pz_FinalState'],
+                flat_data['E_FinalState'],
+            )
+        ]
+    )
+    flat_data['KShortF_P4'] = np.array(
+        [
+            ks1 if ks1.vec3.costheta > ks2.vec3.costheta else ks2
+            for ks1, ks2 in zip(
+                flat_data['KShort1_P4'], flat_data['KShort2_P4']
+            )
+        ]
+    )
+    flat_data['KShortB_P4'] = np.array(
+        [
+            ks2 if ks1.vec3.costheta > ks2.vec3.costheta else ks1
+            for ks1, ks2 in zip(
+                flat_data['KShort1_P4'], flat_data['KShort2_P4']
+            )
+        ]
+    )
+    com_frame = [
+        ks1 + ks2 + p
+        for ks1, ks2, p in zip(
+            flat_data['KShort1_P4'],
+            flat_data['KShort2_P4'],
+            flat_data['Proton_P4'],
+        )
+    ]
+    flat_data['KShortB_P4_COM'] = np.array(
+        [
+            ksb.boost(-com.beta)
+            for ksb, com in zip(flat_data['KShortB_P4'], com_frame)
+        ]
+    )
+    flat_data['KShortB_CosTheta'] = np.array(
+        [ksb.vec3.costheta for ksb in flat_data['KShortB_P4_COM']]
+    )
+    flat_data['M_KShortB_Proton'] = np.array(
+        [
+            (ksb + proton).m
+            for ksb, proton in zip(
+                flat_data['KShortB_P4'], flat_data['Proton_P4']
+            )
+        ]
+    )
+    flat_data['M_KShort1_KShort2'] = np.array(
+        [
+            (ks1 + ks2).m
+            for ks1, ks2 in zip(
+                flat_data['KShort1_P4'], flat_data['KShort2_P4']
+            )
+        ]
+    )
+    return flat_data

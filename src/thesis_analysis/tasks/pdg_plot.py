@@ -105,7 +105,9 @@ class PDGPlot(luigi.Task):
 
     @override
     def run(self):
-        input_path = Path(self.input()[0][0].path)
+        input_paths = [
+            Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
+        ]
         output_path = self.output()[0].path
 
         bins = int(self.bins)  # pyright:ignore[reportArgumentType]
@@ -114,8 +116,9 @@ class PDGPlot(luigi.Task):
             get_branch('M_Resonance'),
             get_branch('Weight'),
         ]
-
-        data = root_io.get_branches(input_path, branches)
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         mpl_style.use('thesis_analysis.thesis')
         bar_height: float = 0.8
         bar_spacing: float = 0.3
@@ -127,8 +130,8 @@ class PDGPlot(luigi.Task):
             gridspec_kw={'height_ratios': [3, 1], 'hspace': 0.0},
         )
         hist_ax.hist(
-            data['M_Resonance'],
-            weights=data['Weight'],
+            flat_data['M_Resonance'],
+            weights=flat_data['Weight'],
             bins=bins,
             range=(1.0, 2.0),
             color=colors.blue,
@@ -140,6 +143,7 @@ class PDGPlot(luigi.Task):
             ls=':',
             color=colors.black,
         )
+        xmin, xmax = 0.95, 2.05
 
         @dataclass
         class Particle:
@@ -218,8 +222,11 @@ class PDGPlot(luigi.Task):
         for particle in particles:
             center = particle.center
             width = particle.width
+            if center - width < xmin:
+                xmin = center - width - 0.05
+            if center + width > xmax:
+                xmax = center + width + 0.05
             color = particle.color
-            label = particle.label
             row = particle.row
 
             rect_bottom = row * (bar_height + bar_spacing) + (
@@ -236,6 +243,7 @@ class PDGPlot(luigi.Task):
             )
             bar_ax.add_patch(rect)
 
+            # label = particle.label
             # rect_center_x = center
             # rect_center_y = rect_bottom + bar_height / 2
             #
@@ -263,6 +271,7 @@ class PDGPlot(luigi.Task):
         all_handles = existing_handles + rect_patches
         all_labels = existing_labels + patch_labels
         hist_ax.legend(handles=all_handles, labels=all_labels)
+        hist_ax.set_xlim(xmin, xmax)
         bar_ax.set_ylim(
             -bar_spacing * 5,
             max(p.row for p in particles) * (bar_height + bar_spacing)

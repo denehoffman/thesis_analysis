@@ -5,26 +5,13 @@ from typing import final, override
 import luigi
 import numpy as np
 
-from thesis_analysis.constants import NBOOT
 from thesis_analysis.paths import Paths
-from thesis_analysis.pwa import (
-    BinnedFitResultUncertainty,
-)
-from thesis_analysis.tasks.binned_fit_uncertainty import BinnedFitUncertainty
-from thesis_analysis.wave import Wave
-
-
-from thesis_analysis import root_io
-from thesis_analysis.constants import get_branch
 from thesis_analysis.splot import (
     SPlotFitResult,
     SPlotFitResultExp,
-    get_sweights,
     splot_method_rename,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
 from thesis_analysis.tasks.splot_fit import SPlotFit
-from thesis_analysis.tasks.splot_plot import SPlotPlot
 
 
 @final
@@ -73,7 +60,7 @@ class SPlotFitReport(luigi.Task):
         output = r"""
 \begin{table}
     \begin{center}
-        \begin{tabular}{cr}\toprule
+        \begin{tabular}{lr}\toprule
             Parameter & Value \\\midrule"""
         for (par_name, value), (_, error) in zip(
             fit_result.total_fit.values.items(),

@@ -39,7 +39,6 @@ class PolarizeGenerated(luigi.Task):
 
         branches = [
             get_branch('RunNumber'),
-            get_branch('EventNumber'),
             get_branch('E_Beam'),
             get_branch('Px_Beam'),
             get_branch('Py_Beam'),

@@ -96,6 +96,22 @@ class RootBranchDict(TypedDict):
     Px_FinalState: NDArray[np.float32]
     Py_FinalState: NDArray[np.float32]
     Pz_FinalState: NDArray[np.float32]
+    E_PiPlus1: NDArray[np.float32]
+    Px_PiPlus1: NDArray[np.float32]
+    Py_PiPlus1: NDArray[np.float32]
+    Pz_PiPlus1: NDArray[np.float32]
+    E_PiMinus1: NDArray[np.float32]
+    Px_PiMinus1: NDArray[np.float32]
+    Py_PiMinus1: NDArray[np.float32]
+    Pz_PiMinus1: NDArray[np.float32]
+    E_PiPlus2: NDArray[np.float32]
+    Px_PiPlus2: NDArray[np.float32]
+    Py_PiPlus2: NDArray[np.float32]
+    Pz_PiPlus2: NDArray[np.float32]
+    E_PiMinus2: NDArray[np.float32]
+    Px_PiMinus2: NDArray[np.float32]
+    Py_PiMinus2: NDArray[np.float32]
+    Pz_PiMinus2: NDArray[np.float32]
     HX_CosTheta: NDArray[np.float32]
     HX_Phi: NDArray[np.float32]
     t_meson: NDArray[np.float32]
@@ -114,6 +130,7 @@ class RootBranchDict(TypedDict):
     ChiSqDOF: NDArray[np.float32]
     RF: NDArray[np.float32]
     MM2: NDArray[np.float32]
+    ME: NDArray[np.float32]
     Proton_Z: NDArray[np.float32]
     Proton_P: NDArray[np.float32]
     Proton_Theta: NDArray[np.float32]
@@ -210,6 +227,22 @@ def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
         'Px_FinalState': np.float32,
         'Py_FinalState': np.float32,
         'Pz_FinalState': np.float32,
+        'E_PiPlus1': np.float32,
+        'Px_PiPlus1': np.float32,
+        'Py_PiPlus1': np.float32,
+        'Pz_PiPlus1': np.float32,
+        'E_PiMinus1': np.float32,
+        'Px_PiMinus1': np.float32,
+        'Py_PiMinus1': np.float32,
+        'Pz_PiMinus1': np.float32,
+        'E_PiPlus2': np.float32,
+        'Px_PiPlus2': np.float32,
+        'Py_PiPlus2': np.float32,
+        'Pz_PiPlus2': np.float32,
+        'E_PiMinus2': np.float32,
+        'Px_PiMinus2': np.float32,
+        'Py_PiMinus2': np.float32,
+        'Pz_PiMinus2': np.float32,
         'HX_CosTheta': np.float32,
         'HX_Phi': np.float32,
         't_meson': np.float32,
@@ -228,6 +261,7 @@ def get_branch(branch_name: str, dim: int = 1) -> RootBranch:
         'ChiSqDOF': np.float32,
         'RF': np.float32,
         'MM2': np.float32,
+        'ME': np.float32,
         'Proton_Z': np.float32,
         'Proton_P': np.float32,
         'Proton_Theta': np.float32,

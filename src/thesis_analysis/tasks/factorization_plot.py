@@ -51,7 +51,7 @@ class FactorizationPlot(luigi.Task):
 
     @override
     def run(self):
-        input_data_paths = [
+        input_paths = [
             Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
         ]
         input_fit: FactorizationFitResult = pickle.load(
@@ -62,33 +62,18 @@ class FactorizationPlot(luigi.Task):
 
         n_quantiles = int(self.n_quantiles)  # pyright:ignore[reportArgumentType]
 
-        data_dfs = {
-            i: root_io.get_branches(
-                input_data_paths[i],
-                [
-                    get_branch('RFL1'),
-                    get_branch('Weight'),
-                    get_branch(SPLOT_CONTROL),
-                ],
-            )
-            for i in range(len(RUN_PERIODS))
-        }
-        data_df = {
-            'RFL1': np.concatenate(
-                [data_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
-            ),
-            'Weight': np.concatenate(
-                [data_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
-            ),
-            SPLOT_CONTROL: np.concatenate(
-                [data_dfs[i][SPLOT_CONTROL] for i in range(len(RUN_PERIODS))]
-            ),
-        }
-
+        branches = [
+            get_branch('RFL1'),
+            get_branch('Weight'),
+            get_branch(SPLOT_CONTROL),
+        ]
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         quantile_edges = get_quantile_edges(
-            data_df[SPLOT_CONTROL],
+            flat_data[SPLOT_CONTROL],
             bins=n_quantiles,
-            weights=data_df['Weight'],
+            weights=flat_data['Weight'],
         )
         quantile_centers = (quantile_edges[1:] + quantile_edges[:-1]) / 2
         mpl_style.use('thesis_analysis.thesis')

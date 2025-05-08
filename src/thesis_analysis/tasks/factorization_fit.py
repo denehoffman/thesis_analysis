@@ -67,6 +67,7 @@ class FactorizationFit(luigi.Task):
                     get_branch('Weight'),
                     get_branch(SPLOT_CONTROL),
                 ],
+                root=False,
             )
             for i in range(len(RUN_PERIODS))
         }
@@ -98,36 +99,17 @@ class FactorizationFit(luigi.Task):
                 Path(self.input()[len(RUN_PERIODS) + i][0].path)
                 for i in range(len(RUN_PERIODS))
             ]
-
-            sigmc_dfs = {
-                i: root_io.get_branches(
-                    input_sigmc_paths[i],
-                    [
-                        get_branch('RFL1'),
-                        get_branch('RFL2'),
-                        get_branch('Weight'),
-                        get_branch(SPLOT_CONTROL),
-                    ],
-                )
-                for i in range(len(RUN_PERIODS))
-            }
-            sigmc_df = {
-                'RFL1': np.concatenate(
-                    [sigmc_dfs[i]['RFL1'] for i in range(len(RUN_PERIODS))]
-                ),
-                'RFL2': np.concatenate(
-                    [sigmc_dfs[i]['RFL2'] for i in range(len(RUN_PERIODS))]
-                ),
-                'Weight': np.concatenate(
-                    [sigmc_dfs[i]['Weight'] for i in range(len(RUN_PERIODS))]
-                ),
-                SPLOT_CONTROL: np.concatenate(
-                    [
-                        sigmc_dfs[i][SPLOT_CONTROL]
-                        for i in range(len(RUN_PERIODS))
-                    ]
-                ),
-            }
+            branches = [
+                get_branch('RFL1'),
+                get_branch('RFL2'),
+                get_branch('Weight'),
+                get_branch(SPLOT_CONTROL),
+            ]
+            sigmc_df = root_io.concatenate_branches(
+                input_sigmc_paths,
+                branches,
+                root=False,
+            )
             fit_result = run_factorization_fits(
                 data_df['RFL1'],
                 data_df['RFL2'],

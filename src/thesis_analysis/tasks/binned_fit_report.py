@@ -63,7 +63,7 @@ class BinnedFitReport(luigi.Task):
 
         output = r"""
 \begin{center}
-    \begin{longtable}{ccrcccr}\toprule
+    \begin{longtable}{clrcclr}\toprule
         Bin (GeV/$c^2$) & Parameter & Value & \hspace{1em} & Bin (GeV/$c^2$) & Parameter & Value \\\midrule
         \endhead
 """

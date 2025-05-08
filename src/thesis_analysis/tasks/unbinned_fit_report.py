@@ -69,22 +69,62 @@ class UnbinnedFitReport(luigi.Task):
         output = r"""
 \begin{table}
     \begin{center}
-        \begin{tabular}{cr}\toprule
-            Parameter & Value \\\midrule"""
+        \begin{tabular}{llrrr}\toprule
+            Wave & Resonance & Real & Imaginary & Total ($\abs{F}^2$) \\\midrule"""
 
         model = fit_result.fit_result.model
         status = fit_result.fit_result.status
+        latest_wave = None
         for i, parameter in enumerate(model.parameters):
-            latex_par_name = Wave.kmatrix_parameter_name_to_latex(parameter)
-            value = status.x[i]
-            unc = np.std(
-                [
-                    fit_result.samples[j][i]
-                    for j in range(len(fit_result.samples))
-                ],
-                ddof=1,
-            )
-            output += f'\n{latex_par_name} & {latex(value, float(unc))}\\\\'
+            if parameter.endswith('real'):
+                parameter_real = parameter
+                parameter_imag = parameter_real.replace('real', 'imag')
+                latex_res_name, latex_wave_name = (
+                    Wave.kmatrix_parameter_name_to_latex_parts(parameter_real)
+                )
+                value_real = status.x[i]
+                unc_real = np.std(
+                    [
+                        fit_result.samples[j][i]
+                        for j in range(len(fit_result.samples))
+                    ],
+                    ddof=1,
+                )
+                if parameter_imag in model.parameters:
+                    value_imag = status.x[i + 1]
+                    unc_imag = np.std(
+                        [
+                            fit_result.samples[j][i + 1]
+                            for j in range(len(fit_result.samples))
+                        ],
+                        ddof=1,
+                    )
+                    total_mag = value_real**2 + value_imag**2
+                    total_mag_unc = np.std(
+                        [
+                            fit_result.samples[j][i] ** 2
+                            + fit_result.samples[j][i + 1] ** 2
+                            for j in range(len(fit_result.samples))
+                        ],
+                        ddof=1,
+                    )
+                else:
+                    value_imag = 0.0
+                    unc_imag = 0.0
+                    total_mag = value_real**2
+                    total_mag_unc = np.std(
+                        [
+                            fit_result.samples[j][i] ** 2
+                            for j in range(len(fit_result.samples))
+                        ],
+                        ddof=1,
+                    )
+                if latex_wave_name == latest_wave:
+                    wave = ''
+                else:
+                    wave = latex_wave_name
+                    latest_wave = latex_wave_name
+                output += f'\n{wave} & {latex_res_name} & {latex(value_real, unc_real)} & {latex(value_imag, unc_imag)} & {latex(total_mag, total_mag_unc)} \\\\'
 
         output += rf"""\bottomrule
         \end{{tabular}}
@@ -96,6 +136,8 @@ class UnbinnedFitReport(luigi.Task):
 
 
 def latex(val: float, unc: float) -> str:
+    if val == 0.0 and unc == 0.0:
+        return r'$0.0$ (fixed)'
     unc_trunc = round(unc, -int(np.floor(np.log10(abs(unc)))) + 1)
     val_trunc = round(val, -int(np.floor(np.log10(abs(unc)))) + 1)
     ndigits = int(np.floor(np.log10(abs(unc)))) - 1

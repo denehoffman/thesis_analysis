@@ -101,7 +101,9 @@ class CosThetaPlot(luigi.Task):
 
     @override
     def run(self):
-        input_path = Path(self.input()[0][0].path)
+        input_paths = [
+            Path(self.input()[i][0].path) for i in range(len(RUN_PERIODS))
+        ]
         output_path = self.output()[0].path
 
         bins = int(self.bins)  # pyright:ignore[reportArgumentType]
@@ -112,14 +114,20 @@ class CosThetaPlot(luigi.Task):
             get_branch('Weight'),
         ]
 
-        data = root_io.get_branches(input_path, branches)
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         ax.hist2d(
-            np.concatenate([data['M_Resonance'], data['M_Resonance']]),
-            np.concatenate([data['HX_CosTheta'], -data['HX_CosTheta']]),
-            weights=np.concatenate([data['Weight'], data['Weight']]),
-            bins=(bins, 50),
+            np.concatenate(
+                [flat_data['M_Resonance'], flat_data['M_Resonance']]
+            ),
+            np.concatenate(
+                [flat_data['HX_CosTheta'], -flat_data['HX_CosTheta']]
+            ),
+            weights=np.concatenate([flat_data['Weight'], flat_data['Weight']]),
+            bins=(bins, 100),
             range=[(1.0, 2.0), (-1.0, 1.0)],
         )
         ax.set_xlabel(

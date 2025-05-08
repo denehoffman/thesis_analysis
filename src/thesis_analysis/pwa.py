@@ -386,8 +386,9 @@ class BinnedFitResult:
         if fit_histograms := self.fit_histograms_cache:
             return fit_histograms
         data_datasets = self.paths.get_data_datasets_binned(self.binning)
+        accmc_datasets = self.paths.get_accmc_datasets_binned(self.binning)
         if mc_paths is None:
-            mc_datasets = self.paths.get_accmc_datasets_binned(self.binning)
+            mc_evaluators = [None] * len(accmc_datasets)
         else:
             unbinned_mc_datasets = [
                 ld.open_amptools(path, pol_in_beam=True) for path in mc_paths
@@ -397,6 +398,10 @@ class BinnedFitResult:
                 dataset.bin_by(res_mass, self.binning.bins, self.binning.range)
                 for dataset in unbinned_mc_datasets
             ]
+            mc_evaluators = [
+                self.model.load(mc_dataset) for mc_dataset in mc_datasets
+            ]
+
         wavesets = Wave.power_set(self.waves)
         counts: dict[int, list[float]] = {
             Wave.encode_waves(waveset): [] for waveset in wavesets
@@ -409,7 +414,7 @@ class BinnedFitResult:
                     ds_data[ibin],
                     ds_accmc[ibin],
                 )
-                for ds_data, ds_accmc in zip(data_datasets, mc_datasets)
+                for ds_data, ds_accmc in zip(data_datasets, accmc_datasets)
             ]
             for waveset in wavesets:
                 counts[Wave.encode_waves(waveset)].append(
@@ -423,8 +428,9 @@ class BinnedFitResult:
                                         mass_dependent=False,
                                         phase_factor=self.phase_factor,
                                     ),
+                                    mc_evaluator=mc_evaluators[i],
                                 )
-                                for nll in nlls
+                                for i, nll in enumerate(nlls)
                             ]
                         )
                     )
@@ -573,11 +579,15 @@ class UnbinnedFitResult:
                 wave: hist for wave, hist in hists.items() if hist is not None
             }
         data_datasets = self.paths.get_data_datasets()
+        accmc_datasets = self.paths.get_accmc_datasets()
         if mc_paths is None:
-            mc_datasets = self.paths.get_accmc_datasets()
+            mc_evaluators = [None] * len(accmc_datasets)
         else:
             mc_datasets = [
                 ld.open_amptools(path, pol_in_beam=True) for path in mc_paths
+            ]
+            mc_evaluators = [
+                self.model.load(mc_dataset) for mc_dataset in mc_datasets
             ]
         wavesets = Wave.power_set(self.waves)
         histograms: dict[int, Histogram] = {}
@@ -596,7 +606,12 @@ class UnbinnedFitResult:
                     np.concatenate(
                         [
                             res_mass.value_on(accmc_dataset)
-                            for accmc_dataset in mc_datasets
+                            for accmc_dataset in accmc_datasets
+                        ]
+                        if mc_paths is None
+                        else [
+                            res_mass.value_on(mc_dataset)
+                            for mc_dataset in mc_datasets
                         ]
                     ),
                     weights=np.concatenate(
@@ -608,8 +623,9 @@ class UnbinnedFitResult:
                                     mass_dependent=True,
                                     phase_factor=self.phase_factor,
                                 ),
+                                mc_evaluator=mc_evaluators[i],
                             )
-                            for nll in nlls
+                            for i, nll in enumerate(nlls)
                         ]
                     ),
                     bins=binning.edges,
@@ -694,14 +710,20 @@ class BinnedFitResultUncertainty:
     def get_error_bars(
         self,
         *,
-        bootstrap_mode: Literal['SE', 'CI', 'CI-BC'] | str = 'CI-BC',
+        bootstrap_mode: Literal[
+            'SE', 'CI', 'CI-BC', 'SE-ACC', 'CI-ACC', 'CI-BC-ACC'
+        ]
+        | str = 'CI-BC',
         confidence_percent: int = 68,
+        mc_paths: list[Path] | None = None,
     ) -> dict[
         int,
         tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
     ]:
         lcu = self.get_lower_center_upper(
-            bootstrap_mode=bootstrap_mode, confidence_percent=confidence_percent
+            bootstrap_mode=bootstrap_mode,
+            confidence_percent=confidence_percent,
+            mc_paths=mc_paths,
         )
         error_bars: dict[
             int,
@@ -723,17 +745,20 @@ class BinnedFitResultUncertainty:
         *,
         bootstrap_mode: Literal['SE', 'CI', 'CI-BC'] | str = 'CI-BC',
         confidence_percent: int = 68,
+        mc_paths: list[Path] | None = None,
     ) -> dict[
         int,
         tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]],
     ]:
+        if mc_paths is not None:
+            bootstrap_mode += '-ACC'
         if (
             self.lcu_cache is not None
             and (cache := self.lcu_cache.get(bootstrap_mode)) is not None
         ):
             return cache  # this will be fine for non-bootstrap uncertainty estimation, since SE is default
         if self.uncertainty == 'sqrt':
-            histograms = self.fit_result.get_histograms()
+            histograms = self.fit_result.get_histograms(mc_paths=mc_paths)
             lcu = {
                 waveset: (
                     np.array(
@@ -769,7 +794,7 @@ class BinnedFitResultUncertainty:
         upper_quantile: dict[int, list[float]] = {
             Wave.encode_waves(waveset): [] for waveset in wavesets
         }
-        fit_histograms = self.fit_result.get_histograms()
+        fit_histograms = self.fit_result.get_histograms(mc_paths=mc_paths)
         for ibin in range(self.fit_result.binning.bins):
             intensities_in_bin: dict[int, list[float]] = {
                 Wave.encode_waves(waveset): [] for waveset in wavesets
@@ -818,7 +843,8 @@ class BinnedFitResultUncertainty:
                     )
             for waveset in wavesets:
                 if (
-                    self.uncertainty == 'bootstrap' and bootstrap_mode == 'CI'
+                    self.uncertainty == 'bootstrap'
+                    and bootstrap_mode in {'CI', 'CI-ACC'}
                 ) or self.uncertainty == 'mcmc':
                     a_lo = (1 - confidence_percent / 100) / 2
                     a_hi = 1 - a_lo
@@ -826,10 +852,10 @@ class BinnedFitResultUncertainty:
                         intensities_in_bin[Wave.encode_waves(waveset)],
                         [a_lo, 0.5, a_hi],
                     )
-                elif (
-                    self.uncertainty == 'bootstrap'
-                    and bootstrap_mode == 'CI-BC'
-                ):
+                elif self.uncertainty == 'bootstrap' and bootstrap_mode in {
+                    'CI-BC',
+                    'CI-BC-ACC',
+                }:
                     fit_value = fit_histograms[
                         Wave.encode_waves(waveset)
                     ].counts[ibin]
@@ -952,6 +978,7 @@ def calculate_bootstrap_uncertainty_unbinned(
     samples: list[NDArray[np.float64]] = []
     logger.info('Bootstrapping Unbinned fit')
     for iboot in range(NBOOT):
+        logger.debug(f'Bootstrapping iteration {iboot}')
         manager = ld.LikelihoodManager()
         bin_model = ld.likelihood_sum(
             [

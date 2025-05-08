@@ -156,7 +156,7 @@ class BinnedAndUnbinnedPlot(luigi.Task):
             binned_fit_result.fit_result.binning, mc_paths=genmc_paths
         )
         fit_error_bars = binned_fit_result.get_error_bars(
-            bootstrap_mode=bootstrap_mode
+            bootstrap_mode=bootstrap_mode, mc_paths=genmc_paths
         )
         if Wave.needs_full_plot(Wave.decode_waves(waves)):
             fig, ax = plt.subplots(nrows=2, ncols=3, sharex=True, sharey=True)

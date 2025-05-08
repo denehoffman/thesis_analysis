@@ -51,17 +51,9 @@ class RFPlot(luigi.Task):
             get_branch('RF'),
             get_branch('Proton_Z'),
         ]
-        data = [
-            root_io.get_branches(input_path, branches)
-            for input_path in input_paths
-        ]
-        flat_data = {
-            branch.name: np.concatenate(
-                [data[i][branch.name] for i in range(len(RUN_PERIODS))]
-            )
-            for branch in branches
-        }
-
+        flat_data = root_io.concatenate_branches(
+            input_paths, branches, root=False
+        )
         if self.chisqdof is not None:
             mask = flat_data['ChiSqDOF'] <= float(self.chisqdof)
         else:

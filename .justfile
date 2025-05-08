@@ -1,3 +1,7 @@
+# local_hostname := env('LOCAL_HOSTNAME')
+# local_username := env('LOCAL_USERNAME', 'dene')
+# local_ssh_port := env('LOCAL_SSH_PORT', '22')
+
 @default:
   just --list
 
@@ -47,6 +51,8 @@
 @run-slurm:
   sbatch slurm_job.sh
 
+# LOCAL_USERNAME={{local_username}} LOCAL_HOSTNAME={{local_hostname}} LOCAL_SSH_PORT={{local_ssh_port}} sbatch slurm_job.sh
+
 #@run-local WORKERS
 #    #!/usr/bin/env bash
 #    set -euxo pipefail
@@ -60,6 +66,3 @@
 
 @open:
   python3 -m webbrowser "localhost:8082"
-
-@transfer:
-  cp analysis/plots/* ../../thesis/figures/
