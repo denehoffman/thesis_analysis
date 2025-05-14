@@ -5,7 +5,6 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-import numpy as np
 
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
@@ -21,7 +20,7 @@ from thesis_analysis.splot import (
     FactorizationFitResult,
     get_quantile_edges,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 from thesis_analysis.tasks.factorization_fit import FactorizationFit
 
 
@@ -29,15 +28,29 @@ from thesis_analysis.tasks.factorization_fit import FactorizationFit
 class FactorizationPlot(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     n_quantiles = luigi.IntParameter()
 
     @override
     def requires(self):
         return [
-            ChiSqDOF(self.data_type, run_period, self.chisqdof)
+            BaryonCut(
+                self.data_type,
+                run_period,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+            )
             for run_period in RUN_PERIODS
         ] + [
-            FactorizationFit(self.data_type, self.chisqdof, self.n_quantiles),
+            FactorizationFit(
+                self.data_type,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+                self.n_quantiles,
+            ),
         ]
 
     @override
@@ -45,7 +58,7 @@ class FactorizationPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'factorization_plot_{self.data_type}_chisqdof_{self.chisqdof:.1f}_{self.n_quantiles}_quantiles.png'
+                / f'factorization_plot_{self.data_type}_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_{self.n_quantiles}_quantiles.png'
             ),
         ]
 

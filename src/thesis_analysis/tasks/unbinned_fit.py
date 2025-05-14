@@ -12,7 +12,7 @@ from thesis_analysis.pwa import (
     SinglePathSet,
     fit_unbinned,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 from thesis_analysis.wave import Wave
 
@@ -21,6 +21,8 @@ from thesis_analysis.wave import Wave
 class UnbinnedFit(luigi.Task):
     waves = luigi.IntParameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
@@ -39,16 +41,20 @@ class UnbinnedFit(luigi.Task):
                 'data',
                 run_period,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
             )
             for run_period in RUN_PERIODS
         ] + [
-            ChiSqDOF(
+            BaryonCut(
                 'accmc',
                 run_period,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
             )
             for run_period in RUN_PERIODS
         ]
@@ -59,6 +65,8 @@ class UnbinnedFit(luigi.Task):
                 GuidedFit(
                     self.waves,
                     self.chisqdof,
+                    self.ksb_costheta,
+                    self.cut_baryons,
                     self.splot_method,
                     self.nsig,
                     self.nbkg,
@@ -75,7 +83,7 @@ class UnbinnedFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.pkl'
+                / f'unbinned_fit_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_guided" if self.guided else ""}{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_uncertainty_{self.uncertainty}.pkl'
             ),
         ]
 

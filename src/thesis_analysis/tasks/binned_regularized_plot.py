@@ -19,6 +19,8 @@ from thesis_analysis.wave import Wave
 class BinnedRegularizedPlot(luigi.Task):
     waves = luigi.IntParameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
@@ -34,6 +36,8 @@ class BinnedRegularizedPlot(luigi.Task):
             BinnedRegularizedFit(
                 self.waves,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
@@ -49,7 +53,7 @@ class BinnedRegularizedPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'binned_regularized_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_lda_{self.lda}_gamma_{self.gamma}.png'
+                / f'binned_regularized_fit_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b{"_phase_factor" if self.phase_factor else ""}_waves{self.waves}_lda_{self.lda}_gamma_{self.gamma}.png'
             ),
         ]
 

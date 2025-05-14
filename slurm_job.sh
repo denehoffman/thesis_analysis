@@ -4,8 +4,8 @@
 #SBATCH --error=slurm.log
 #SBATCH --ntasks=32
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=60G
-#SBATCH --partition=green
+#SBATCH --mem=120G
+#SBATCH --partition=blue
 
 source /home/nhoffman/.venv/bin/activate
 source /raid3/nhoffman/root/root_install_313/bin/thisroot.sh

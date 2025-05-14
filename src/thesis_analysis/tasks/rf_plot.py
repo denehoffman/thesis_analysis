@@ -4,7 +4,6 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-import numpy as np
 
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
@@ -14,30 +13,48 @@ from thesis_analysis.constants import (
     RUN_PERIODS,
     get_branch,
 )
-from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.data import GetData
+from thesis_analysis.utils import get_plot_paths, get_plot_requirements
 
 
 @final
 class RFPlot(luigi.Task):
     data_type = luigi.Parameter()
+    original = luigi.BoolParameter(False)
     chisqdof = luigi.OptionalFloatParameter(None)
-    protonz = luigi.OptionalBoolParameter(False)
+    ksb_costheta = luigi.OptionalFloatParameter(None)
+    cut_baryons = luigi.OptionalBoolParameter(True)
+    splot_method = luigi.OptionalParameter(None)
+    nsig = luigi.OptionalIntParameter(None)
+    nbkg = luigi.OptionalIntParameter(None)
 
     @override
     def requires(self):
-        return [
-            GetData(self.data_type, run_period) for run_period in RUN_PERIODS
-        ]
+        return get_plot_requirements(
+            data_type=self.data_type,
+            original=self.original,
+            chisqdof=self.chisqdof,
+            ksb_costheta=self.ksb_costheta,
+            cut_baryons=self.cut_baryons,
+            splot_method=self.splot_method,
+            nsig=self.nsig,
+            nbkg=self.nbkg,
+        )
 
     @override
     def output(self):
-        return [
-            luigi.LocalTarget(
-                Paths.plots
-                / f'{self.data_type}_RF{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
-            ),
-        ]
+        return get_plot_paths(
+            [
+                'rf',
+            ],
+            self.data_type,
+            self.original,
+            self.chisqdof,
+            self.ksb_costheta,
+            self.cut_baryons,
+            self.splot_method,
+            self.nsig,
+            self.nbkg,
+        )
 
     @override
     def run(self):
@@ -47,31 +64,17 @@ class RFPlot(luigi.Task):
         output_path_rf = self.output()[0].path
 
         branches = [
-            get_branch('ChiSqDOF'),
             get_branch('RF'),
-            get_branch('Proton_Z'),
         ]
         flat_data = root_io.concatenate_branches(
             input_paths, branches, root=False
         )
-        if self.chisqdof is not None:
-            mask = flat_data['ChiSqDOF'] <= float(self.chisqdof)
-        else:
-            mask = np.ones(len(flat_data['ChiSqDOF']), dtype=bool)
-
-        if self.protonz:
-            mask = np.logical_and(
-                mask,
-                np.logical_and(
-                    flat_data['Proton_Z'] >= 50, flat_data['Proton_Z'] <= 80
-                ),
-            )
 
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
         bins = 200
         ax.hist(
-            flat_data['RF'][mask],
+            flat_data['RF'],
             bins=bins,
             range=(-20.0, 20.0),
             color=colors.blue,

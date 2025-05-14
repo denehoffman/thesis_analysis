@@ -5,13 +5,12 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
+import numpy as np
 
-import thesis_analysis.colors as colors
 from thesis_analysis import root_io
 from thesis_analysis.constants import (
     BRANCH_NAME_TO_LATEX,
     BRANCH_NAME_TO_LATEX_UNITS,
-    DATA_TYPE_TO_LATEX,
     RUN_PERIODS,
     get_branch,
 )
@@ -19,7 +18,7 @@ from thesis_analysis.utils import get_plot_paths, get_plot_requirements
 
 
 @final
-class MassPlot(luigi.Task):
+class PhiPlot(luigi.Task):
     data_type = luigi.Parameter()
     bins = luigi.IntParameter()
     original = luigi.BoolParameter(False)
@@ -47,7 +46,7 @@ class MassPlot(luigi.Task):
     def output(self):
         return get_plot_paths(
             [
-                'mass',
+                'phi',
             ],
             self.data_type,
             self.original,
@@ -70,6 +69,7 @@ class MassPlot(luigi.Task):
 
         branches = [
             get_branch('M_Resonance'),
+            get_branch('HX_Phi'),
             get_branch('Weight'),
         ]
 
@@ -78,19 +78,23 @@ class MassPlot(luigi.Task):
         )
         mpl_style.use('thesis_analysis.thesis')
         fig, ax = plt.subplots()
-        ax.hist(
-            flat_data['M_Resonance'],
-            weights=flat_data['Weight'],
-            bins=bins,
-            range=(1.0, 2.0),
-            color=colors.blue,
-            label=DATA_TYPE_TO_LATEX[str(self.data_type)],
+        ax.hist2d(
+            np.concatenate(
+                [flat_data['M_Resonance'], flat_data['M_Resonance']]
+            ),
+            np.concatenate(
+                [
+                    flat_data['HX_Phi'],
+                    np.mod(flat_data['HX_Phi'] + 2 * np.pi, 2 * np.pi) - np.pi,
+                ]
+            ),
+            weights=np.concatenate([flat_data['Weight'], flat_data['Weight']]),
+            bins=(bins, 100),
+            range=[(1.0, 2.0), (-np.pi, np.pi)],
         )
         ax.set_xlabel(
             f'{BRANCH_NAME_TO_LATEX["M_Resonance"]} ({BRANCH_NAME_TO_LATEX_UNITS["M_Resonance"]})'
         )
-        bin_width_mev = int(1000 / bins)
-        ax.set_ylabel(f'Counts / {bin_width_mev} MeV/$c^2$')
-        ax.legend()
+        ax.set_ylabel(f'{BRANCH_NAME_TO_LATEX["HX_Phi"]}')
         fig.savefig(output_path)
         plt.close()

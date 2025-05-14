@@ -15,19 +15,29 @@ from thesis_analysis.tasks.factorization_plot import FactorizationPlot
 @final
 class FactorizationReport(luigi.Task):
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     max_quantiles = luigi.IntParameter()
 
     @override
     def requires(self):
         max_quantiles = int(self.max_quantiles)  # pyright:ignore[reportArgumentType]
         return [
-            FactorizationFit(data_type, self.chisqdof, n_quantiles)
+            FactorizationFit(
+                data_type,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+                n_quantiles,
+            )
             for n_quantiles in range(2, max_quantiles + 1)  # type: ignore
             for data_type in ['data', 'accmc', 'bkgmc']
         ] + [
             FactorizationPlot(
                 data_type=data_type,
                 chisqdof=self.chisqdof,
+                ksb_costheta=self.ksb_costheta,
+                cut_baryons=self.cut_baryons,
                 n_quantiles=n_quantiles,
             )
             for n_quantiles in range(2, max_quantiles + 1)  # type: ignore
@@ -39,7 +49,7 @@ class FactorizationReport(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.reports
-                / f'factorization_report_chisqdof_{self.chisqdof:.1f}_{self.max_quantiles}_quantiles.txt'
+                / f'factorization_report_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_{self.max_quantiles}_quantiles.txt'
             ),
         ]
 

@@ -38,15 +38,15 @@ def get_branches(
 
             for i in range(intree.GetEntries()):
                 intree.GetEntry(i)
-                for i, branch in enumerate(branch_arrays):
+                for j, branch in enumerate(branch_arrays):
                     if branch is None:  # string type
-                        data_dict[branches[i].name].append(
-                            str(getattr(intree, branches[i].name))
+                        data_dict[branches[j].name].append(
+                            str(getattr(intree, branches[j].name))
                         )
-                    elif branches[i].dim == 1:
-                        data_dict[branches[i].name].append(branch[0])
+                    elif branches[j].dim == 1:
+                        data_dict[branches[j].name].append(branch[0])
                     else:
-                        data_dict[branches[i].name].append(branch.copy())
+                        data_dict[branches[j].name].append(branch.copy())
         finally:
             infile.Close()
     else:
@@ -58,6 +58,8 @@ def get_branches(
         )
     branch_dict: RootBranchDict = {
         key: np.array(value, dtype=branch.dtype)
+        if branch.dim == 1
+        else np.stack(value, dtype=branch.dtype)
         for branch, (key, value) in zip(branches, data_dict.items())
     }  # pyright:ignore[reportAssignmentType]
     return branch_dict

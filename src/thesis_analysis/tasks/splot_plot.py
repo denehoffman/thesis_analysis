@@ -21,7 +21,7 @@ from thesis_analysis.splot import (
     SPlotFitResultExp,
     exp_pdf_single,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 from thesis_analysis.tasks.splot_fit import SPlotFit
 
 
@@ -29,6 +29,8 @@ from thesis_analysis.tasks.splot_fit import SPlotFit
 class SPlotPlot(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
@@ -36,12 +38,20 @@ class SPlotPlot(luigi.Task):
     @override
     def requires(self):
         return [
-            ChiSqDOF(self.data_type, run_period, self.chisqdof)
+            BaryonCut(
+                self.data_type,
+                run_period,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+            )
             for run_period in RUN_PERIODS
         ] + [
             SPlotFit(
                 self.data_type,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
@@ -53,7 +63,7 @@ class SPlotPlot(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'splot_fit_{self.data_type}_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
+                / f'splot_fit_{self.data_type}_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.png'
             ),
         ]
 

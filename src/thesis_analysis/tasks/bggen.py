@@ -24,6 +24,8 @@ class BGGENPlots(luigi.Task):
     run_period = luigi.Parameter()
     chisqdof = luigi.OptionalFloatParameter(None)
     protonz = luigi.OptionalBoolParameter(False)
+    ksb_costheta = luigi.OptionalFloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
 
     @override
     def requires(self):
@@ -36,19 +38,19 @@ class BGGENPlots(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.plots
-                / f'bggen_chisqdof{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'bggen_chisqdof{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{f"_ksb_costheta_{self.ksb_costheta:.2f}{'mesons' if self.cut_baryons else 'baryons'}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'bggen_protonz{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'bggen_protonz{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{f"_ksb_costheta_{self.ksb_costheta:.2f}{'mesons' if self.cut_baryons else 'baryons'}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'bggen_rfl{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'bggen_rfl{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{f"_ksb_costheta_{self.ksb_costheta:.2f}{'mesons' if self.cut_baryons else 'baryons'}" if self.ksb_costheta is not None else ""}.png'
             ),
             luigi.LocalTarget(
                 Paths.plots
-                / f'bggen_mm2{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}.png'
+                / f'bggen_mm2{f"_chisqdof_{self.chisqdof:.1f}" if self.chisqdof is not None else ""}{"_protonz" if self.protonz else ""}{f"_ksb_costheta_{self.ksb_costheta:.2f}{'mesons' if self.cut_baryons else 'baryons'}" if self.ksb_costheta is not None else ""}.png'
             ),
         ]
 
@@ -60,6 +62,7 @@ class BGGENPlots(luigi.Task):
         output_path_rfl = self.output()[2].path
         output_path_mm2 = self.output()[3].path
 
+        # TODO:
         if self.chisqdof is not None:
             chisqdof = float(self.chisqdof)
         else:

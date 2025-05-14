@@ -155,16 +155,16 @@ class CutPlotsCombined(luigi.Task):
             get_branch('ME'),
         ]
         flat_data = root_io.concatenate_branches(
-            input_paths_data, branches, root=False
+            input_paths_data, branches, root=True
         )
         flat_data = get_fs_branches(flat_data)
 
         flat_sigmc = root_io.concatenate_branches(
-            input_paths_sigmc, branches, root=False
+            input_paths_sigmc, branches, root=True
         )
         flat_sigmc = get_fs_branches(flat_sigmc)
         flat_bkgmc = root_io.concatenate_branches(
-            input_paths_bkgmc, branches, root=False
+            input_paths_bkgmc, branches, root=True
         )
         flat_bkgmc = get_fs_branches(flat_bkgmc)
 
@@ -446,7 +446,7 @@ class CutPlotsCombined(luigi.Task):
         fig, ax = plt.subplots()
         bins = 100
         ax.hist(
-            flat_data['M_KShortB_Proton'][mask_data],
+            flat_data['M_Baryon'][mask_data],
             bins=bins,
             range=(1.4, 3.7),
             color=colors.blue,
@@ -455,7 +455,7 @@ class CutPlotsCombined(luigi.Task):
             label=DATA_TYPE_TO_LATEX[self.data_type],
         )
         ax.hist(
-            flat_sigmc['M_KShortB_Proton'][mask_sigmc],
+            flat_sigmc['M_Baryon'][mask_sigmc],
             bins=bins,
             range=(1.4, 3.7),
             color=colors.green,
@@ -464,7 +464,7 @@ class CutPlotsCombined(luigi.Task):
             label=DATA_TYPE_TO_LATEX[data_type_sigmc],
         )
         ax.hist(
-            flat_bkgmc['M_KShortB_Proton'][mask_bkgmc],
+            flat_bkgmc['M_Baryon'][mask_bkgmc],
             bins=bins,
             range=(1.4, 3.7),
             color=colors.red,
@@ -484,7 +484,7 @@ class CutPlotsCombined(luigi.Task):
         fig, ax = plt.subplots()
         bins = 100
         ax.hist(
-            flat_data['M_KShort1_KShort2'][mask_data],
+            flat_data['M_Meson'][mask_data],
             bins=bins,
             range=(0.9, 3.0),
             color=colors.blue,
@@ -493,7 +493,7 @@ class CutPlotsCombined(luigi.Task):
             label=DATA_TYPE_TO_LATEX[self.data_type],
         )
         ax.hist(
-            flat_sigmc['M_KShort1_KShort2'][mask_sigmc],
+            flat_sigmc['M_Meson'][mask_sigmc],
             bins=bins,
             range=(0.9, 3.0),
             color=colors.green,
@@ -502,7 +502,7 @@ class CutPlotsCombined(luigi.Task):
             label=DATA_TYPE_TO_LATEX[data_type_sigmc],
         )
         ax.hist(
-            flat_bkgmc['M_KShort1_KShort2'][mask_bkgmc],
+            flat_bkgmc['M_Meson'][mask_bkgmc],
             bins=bins,
             range=(0.9, 3.0),
             color=colors.red,
@@ -518,7 +518,7 @@ class CutPlotsCombined(luigi.Task):
         fig.savefig(output_path_ksks)
         plt.close()
 
-        # KShort_B CosTheta
+        # Baryon CosTheta
         fig, ax = plt.subplots()
         bins = 100
         ax.hist(
@@ -555,11 +555,11 @@ class CutPlotsCombined(luigi.Task):
         fig.savefig(output_path_ksb_costheta)
         plt.close()
 
-        # KShort_B + Proton v KShort_B CosTheta
+        # Baryon vs Baryon CosTheta
         fig, ax = plt.subplots()
         bins = 100
         ax.hist2d(
-            flat_data['M_KShortB_Proton'][mask_data],
+            flat_data['M_Baryon'][mask_data],
             flat_data['KShortB_CosTheta'][mask_data],
             bins=bins,
             range=[(1.4, 3.7), (-1, 1)],
@@ -587,11 +587,11 @@ class CutPlotsCombined(luigi.Task):
         fig.savefig(output_path_ksbp_costheta_v_ksbp)
         plt.close()
 
-        # KShort1 + KShort2 v KShort_B CosTheta
+        # Meson v Baryon CosTheta
         fig, ax = plt.subplots()
         bins = 100
         ax.hist2d(
-            flat_data['M_KShort1_KShort2'][mask_data],
+            flat_data['M_Meson'][mask_data],
             flat_data['KShortB_CosTheta'][mask_data],
             bins=bins,
             range=[(0.9, 3.0), (-1, 1)],
@@ -614,7 +614,7 @@ class CutPlotsCombined(luigi.Task):
         #     density=True,
         #     label=DATA_TYPE_TO_LATEX[data_type_bkgmc],
         # )
-        ax.set_xlabel('Invariant Mass of $K_{S,B}^0 p$')
+        ax.set_xlabel('Invariant Mass of $K_{S,1}^0 K_{S,2}^0$')
         ax.set_ylabel(r'$\cos\theta$ of $K_{S,B}^0$')
         fig.savefig(output_path_ksbp_costheta_v_ksks)
         plt.close()
@@ -625,7 +625,7 @@ class CutPlotsCombined(luigi.Task):
         ax.hist(
             flat_data['ME'][mask_data],
             bins=bins,
-            range=(-0.1, 0.1),
+            range=(-0.3, 0.3),
             color=colors.blue,
             histtype='step',
             density=True,
@@ -634,7 +634,7 @@ class CutPlotsCombined(luigi.Task):
         ax.hist(
             flat_sigmc['ME'][mask_sigmc],
             bins=bins,
-            range=(-0.1, 0.1),
+            range=(-0.3, 0.3),
             color=colors.green,
             histtype='step',
             density=True,
@@ -643,7 +643,7 @@ class CutPlotsCombined(luigi.Task):
         ax.hist(
             flat_bkgmc['ME'][mask_bkgmc],
             bins=bins,
-            range=(-0.1, 0.1),
+            range=(-0.3, 0.3),
             color=colors.red,
             histtype='step',
             density=True,
@@ -769,7 +769,15 @@ def get_fs_branches(
             flat_data['Proton_P4'],
         )
     ]
-    flat_data['KShortB_P4_COM'] = np.array(
+    flat_data['M_Baryon'] = np.array(
+        [
+            (ksb + proton).m
+            for ksb, proton in zip(
+                flat_data['KShortB_P4'], flat_data['Proton_P4']
+            )
+        ]
+    )
+    flat_data['Baryon_P4_COM'] = np.array(
         [
             ksb.boost(-com.beta)
             for ksb, com in zip(flat_data['KShortB_P4'], com_frame)
@@ -778,15 +786,7 @@ def get_fs_branches(
     flat_data['KShortB_CosTheta'] = np.array(
         [ksb.vec3.costheta for ksb in flat_data['KShortB_P4_COM']]
     )
-    flat_data['M_KShortB_Proton'] = np.array(
-        [
-            (ksb + proton).m
-            for ksb, proton in zip(
-                flat_data['KShortB_P4'], flat_data['Proton_P4']
-            )
-        ]
-    )
-    flat_data['M_KShort1_KShort2'] = np.array(
+    flat_data['M_Meson'] = np.array(
         [
             (ks1 + ks2).m
             for ks1, ks2 in zip(

@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 
+import luigi
 import numpy as np
 from iminuit import Minuit
 from numpy.typing import NDArray
+
+from thesis_analysis.constants import RUN_PERIODS
 
 
 @dataclass
@@ -139,3 +142,111 @@ class FitResult:
         return (
             self.n_parameters * np.log(self.n_events) + self.n2ll
         )  # kln(n) + -2ln(L)
+
+
+def get_plot_requirements(
+    data_type,
+    original,
+    chisqdof,
+    ksb_costheta,
+    cut_baryons,
+    splot_method,
+    nsig,
+    nbkg,
+) -> list[luigi.Task]:
+    from thesis_analysis.tasks.accid_and_pol import AccidentalsAndPolarization
+    from thesis_analysis.tasks.baryon_cut import BaryonCut
+    from thesis_analysis.tasks.chisqdof import ChiSqDOF
+    from thesis_analysis.tasks.data import GetData
+    from thesis_analysis.tasks.splot_weights import SPlotWeights
+
+    if original:
+        return [GetData(data_type, run_period) for run_period in RUN_PERIODS]
+    elif chisqdof is None:
+        return [
+            AccidentalsAndPolarization(data_type, run_period)
+            for run_period in RUN_PERIODS
+        ]
+    elif ksb_costheta is None:
+        return [
+            ChiSqDOF(data_type, run_period, chisqdof)
+            for run_period in RUN_PERIODS
+        ]
+    elif nsig is None and nbkg is None:
+        return [
+            BaryonCut(
+                data_type,
+                run_period,
+                chisqdof,
+                ksb_costheta,
+                cut_baryons,
+            )
+            for run_period in RUN_PERIODS
+        ]
+    elif splot_method is not None and nsig is not None and nbkg is not None:
+        return [
+            SPlotWeights(
+                data_type,
+                run_period,
+                chisqdof,
+                ksb_costheta,
+                cut_baryons,
+                splot_method,
+                nsig,
+                nbkg,
+            )
+            for run_period in RUN_PERIODS
+        ]
+    else:
+        raise Exception('Invalid requirements for plotting!')
+
+
+def get_plot_paths(
+    names: list[str],
+    data_type,
+    original,
+    chisqdof,
+    ksb_costheta,
+    cut_baryons,
+    splot_method,
+    nsig,
+    nbkg,
+) -> list[luigi.LocalTarget]:
+    from thesis_analysis.paths import Paths
+
+    path = Paths.plots
+    if original:
+        return [
+            luigi.LocalTarget(path / f'{name}_{data_type}.png')
+            for name in names
+        ]
+    elif chisqdof is None:
+        return [
+            luigi.LocalTarget(path / f'{name}_{data_type}_accpol.png')
+            for name in names
+        ]
+    elif ksb_costheta is None:
+        return [
+            luigi.LocalTarget(
+                path / f'{name}_{data_type}_accpol_chisqdof_{chisqdof:.1f}.png'
+            )
+            for name in names
+        ]
+    elif nsig is None and nbkg is None:
+        return [
+            luigi.LocalTarget(
+                path
+                / f'{name}_{data_type}_accpol_chisqdof_{chisqdof:.1f}_ksb_costheta_{ksb_costheta:.2f}{"mesons" if cut_baryons else "baryons"}.png'
+            )
+            for name in names
+        ]
+    elif splot_method is not None and nsig is not None and nbkg is not None:
+        return [
+            luigi.LocalTarget(
+                path
+                / f'{name}_{data_type}_accpol_chisqdof_{chisqdof:.1f}_ksb_costheta_{ksb_costheta:.2f}{"mesons" if cut_baryons else "baryons"}_splot_{splot_method}_{nsig}s_{nbkg}b.png'
+            )
+            for name in names
+        ]
+    else:
+        raise Exception('Invalid requirements for plotting!')

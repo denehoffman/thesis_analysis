@@ -4,7 +4,6 @@ from typing import final, override
 import luigi
 import matplotlib.pyplot as plt
 import matplotlib.style as mpl_style
-import numpy as np
 
 from thesis_analysis import colors, root_io
 from thesis_analysis.constants import (
@@ -14,30 +13,48 @@ from thesis_analysis.constants import (
     RUN_PERIODS,
     get_branch,
 )
-from thesis_analysis.paths import Paths
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.utils import get_plot_paths, get_plot_requirements
 
 
 @final
 class RFLPlot(luigi.Task):
     data_type = luigi.Parameter()
-    chisqdof = luigi.FloatParameter()
+    original = luigi.BoolParameter(False)
+    chisqdof = luigi.OptionalFloatParameter(None)
+    ksb_costheta = luigi.OptionalFloatParameter(None)
+    cut_baryons = luigi.OptionalBoolParameter(True)
+    splot_method = luigi.OptionalParameter(None)
+    nsig = luigi.OptionalIntParameter(None)
+    nbkg = luigi.OptionalIntParameter(None)
 
     @override
     def requires(self):
-        return [
-            ChiSqDOF(self.data_type, run_period, self.chisqdof)
-            for run_period in RUN_PERIODS
-        ]
+        return get_plot_requirements(
+            data_type=self.data_type,
+            original=self.original,
+            chisqdof=self.chisqdof,
+            ksb_costheta=self.ksb_costheta,
+            cut_baryons=self.cut_baryons,
+            splot_method=self.splot_method,
+            nsig=self.nsig,
+            nbkg=self.nbkg,
+        )
 
     @override
     def output(self):
-        return [
-            luigi.LocalTarget(
-                Paths.plots
-                / f'rfl_{self.data_type}_chisqdof_{self.chisqdof:.1f}.png'
-            ),
-        ]
+        return get_plot_paths(
+            [
+                'rfl',
+            ],
+            self.data_type,
+            self.original,
+            self.chisqdof,
+            self.ksb_costheta,
+            self.cut_baryons,
+            self.splot_method,
+            self.nsig,
+            self.nbkg,
+        )
 
     @override
     def run(self):

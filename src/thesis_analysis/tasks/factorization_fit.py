@@ -18,24 +18,38 @@ from thesis_analysis.splot import (
     run_factorization_fits,
     run_factorization_fits_mc,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 
 
 @final
 class FactorizationFit(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     n_quantiles = luigi.IntParameter()
 
     @override
     def requires(self):
         reqs = [
-            ChiSqDOF(self.data_type, run_period, self.chisqdof)
+            BaryonCut(
+                self.data_type,
+                run_period,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+            )
             for run_period in RUN_PERIODS
         ]
         if self.data_type == 'data':
             reqs += [
-                ChiSqDOF('accmc', run_period, self.chisqdof)
+                BaryonCut(
+                    'accmc',
+                    run_period,
+                    self.chisqdof,
+                    self.ksb_costheta,
+                    self.cut_baryons,
+                )
                 for run_period in RUN_PERIODS
             ]
         return reqs
@@ -45,7 +59,7 @@ class FactorizationFit(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.fits
-                / f'factorization_{self.data_type}_chisqdof_{self.chisqdof:.1f}_{self.n_quantiles}_quantiles.pkl'
+                / f'factorization_{self.data_type}_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_{self.n_quantiles}_quantiles.pkl'
             ),
         ]
 

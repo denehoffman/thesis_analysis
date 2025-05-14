@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from thesis_analysis import root_io
 from thesis_analysis.constants import get_branch
 from thesis_analysis.splot import get_sweights
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 from thesis_analysis.tasks.splot_fit import SPlotFit
 from thesis_analysis.tasks.splot_plot import SPlotPlot
 
@@ -19,6 +19,8 @@ class SPlotWeights(luigi.Task):
     data_type = luigi.Parameter()
     run_period = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
@@ -26,10 +28,18 @@ class SPlotWeights(luigi.Task):
     @override
     def requires(self):
         return [
-            ChiSqDOF(self.data_type, self.run_period, self.chisqdof),
+            BaryonCut(
+                self.data_type,
+                self.run_period,
+                self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
+            ),
             SPlotFit(
                 self.data_type,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
@@ -37,6 +47,8 @@ class SPlotWeights(luigi.Task):
             SPlotPlot(
                 self.data_type,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
@@ -49,7 +61,7 @@ class SPlotWeights(luigi.Task):
         return [
             luigi.LocalTarget(
                 input_path.parent
-                / f'{input_path.stem}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.root'
+                / f'{input_path.stem}_splot_{self.splot_method}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_{self.nsig}s_{self.nbkg}b.root'
             )
         ]
 

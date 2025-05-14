@@ -18,6 +18,8 @@ from thesis_analysis.tasks.splot_fit import SPlotFit
 class SPlotFitReport(luigi.Task):
     data_type = luigi.Parameter()
     chisqdof = luigi.FloatParameter()
+    ksb_costheta = luigi.FloatParameter()
+    cut_baryons = luigi.OptionalBoolParameter(True)
     splot_method = luigi.Parameter()
     nsig = luigi.IntParameter()
     nbkg = luigi.IntParameter()
@@ -28,6 +30,8 @@ class SPlotFitReport(luigi.Task):
             SPlotFit(
                 self.data_type,
                 self.chisqdof,
+                self.ksb_costheta,
+                self.cut_baryons,
                 self.splot_method,
                 self.nsig,
                 self.nbkg,
@@ -39,7 +43,7 @@ class SPlotFitReport(luigi.Task):
         return [
             luigi.LocalTarget(
                 Paths.reports
-                / f'splot_fit_chisqdof_{self.chisqdof:.1f}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.txt'
+                / f'splot_fit_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.txt'
             ),
         ]
 
