@@ -29,7 +29,7 @@ class BaryonCut(luigi.Task):
         return [
             luigi.LocalTarget(
                 Path(str(input_path)).parent
-                / f'{input_path.stem}_chisqdof_{self.chisqdof:.1f}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}.root'
+                / f'{input_path.stem}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}.root'
             )
         ]
 

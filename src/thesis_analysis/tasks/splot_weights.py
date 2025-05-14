@@ -61,7 +61,7 @@ class SPlotWeights(luigi.Task):
         return [
             luigi.LocalTarget(
                 input_path.parent
-                / f'{input_path.stem}_splot_{self.splot_method}_ksb_costheta_{self.ksb_costheta:.2f}{"mesons" if self.cut_baryons else "baryons"}_{self.nsig}s_{self.nbkg}b.root'
+                / f'{input_path.stem}_splot_{self.splot_method}_{self.nsig}s_{self.nbkg}b.root'
             )
         ]
 
