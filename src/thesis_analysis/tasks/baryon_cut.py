@@ -60,16 +60,16 @@ class BaryonCut(luigi.Task):
                 e_finalstate[0],
             )
             ks1_p4 = ld.Vector4(
-                px_finalstate[0],
-                py_finalstate[0],
-                pz_finalstate[0],
-                e_finalstate[0],
+                px_finalstate[1],
+                py_finalstate[1],
+                pz_finalstate[1],
+                e_finalstate[1],
             )
             ks2_p4 = ld.Vector4(
-                px_finalstate[0],
-                py_finalstate[0],
-                pz_finalstate[0],
-                e_finalstate[0],
+                px_finalstate[2],
+                py_finalstate[2],
+                pz_finalstate[2],
+                e_finalstate[2],
             )
             com_frame = p_p4 + ks1_p4 + ks2_p4
             ksb_p4 = (
