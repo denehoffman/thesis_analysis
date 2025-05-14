@@ -24,7 +24,7 @@ class BGGENPlots(luigi.Task):
     run_period = luigi.Parameter()
     chisqdof = luigi.OptionalFloatParameter(None)
     protonz = luigi.OptionalBoolParameter(False)
-    ksb_costheta = luigi.OptionalFloatParameter()
+    ksb_costheta = luigi.OptionalFloatParameter(None)
     cut_baryons = luigi.OptionalBoolParameter(True)
 
     @override

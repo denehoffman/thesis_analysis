@@ -78,6 +78,7 @@ class SPlotFit(luigi.Task):
             get_branch('RFL1'),
             get_branch('RFL2'),
             get_branch('Weight'),
+            get_branch(SPLOT_CONTROL),
         ]
         flat_data = root_io.concatenate_branches(
             input_data_paths, branches, root=False

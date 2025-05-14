@@ -67,26 +67,21 @@ class BinnedFitReport(luigi.Task):
 
         output = r"""
 \begin{center}
-    \begin{longtable}{clrcclr}\toprule
-        Bin (GeV/$c^2$) & Parameter & Value & \hspace{1em} & Bin (GeV/$c^2$) & Parameter & Value \\\midrule
+    \begin{longtable}{clrrr}\toprule
+         Bin (GeV/$c^2$) & Wave & Real & Imaginary & Total ($\abs{F}^2$) \\\midrule
         \endhead
 """
         statuses = fit_result.fit_result.statuses
         edges = fit_result.fit_result.binning.edges
-        for ibin in range(0, len(statuses), 2):
+        for ibin in range(len(statuses)):
             bin_status = statuses[ibin]
-            bin_status2 = statuses[ibin + 1]
             last_bin = (
                 ibin == len(statuses) - 1 or ibin + 1 == len(statuses) - 1
             )
             bin_edges = rf'{edges[ibin]:.3f}\textendash {edges[ibin + 1]:.3f}'
-            bin_edges2 = (
-                rf'{edges[ibin + 1]:.3f}\textendash {edges[ibin + 2]:.3f}'
-            )
             for iwave, wave in enumerate(Wave.decode_waves(waves)):
                 last_wave = iwave == len(Wave.decode_waves(waves)) - 1
                 coefficient_name = wave.coefficient_name
-                l_re = rf'$\Re\left[{wave.latex.replace("$", "")}\right]$'
                 i_re = fit_result.fit_result.model.parameters.index(
                     f'{coefficient_name} real'
                 )
@@ -98,21 +93,18 @@ class BinnedFitReport(luigi.Task):
                     ],
                     ddof=1,
                 )
-                c_re2 = bin_status2.x[i_re]
-                e_re2 = np.std(
-                    [
-                        fit_result.samples[ibin + 1][j][i_re]
-                        for j in range(len(fit_result.samples[ibin + 1]))
-                    ],
-                    ddof=1,
-                )
-                output += '\n'
-                if iwave == 0:
-                    output += rf'            {bin_edges} & {l_re} & {latex(c_re, float(e_re))} & & {bin_edges2} & {l_re} & {latex(c_re2, float(e_re2))} \\*'
+                if wave.l == 0:
+                    c_im = 0.0
+                    e_im = 0.0
+                    c_tot = c_re**2
+                    e_tot = np.std(
+                        [
+                            fit_result.samples[ibin][j][i_re] ** 2
+                            for j in range(len(fit_result.samples[ibin]))
+                        ],
+                        ddof=1,
+                    )
                 else:
-                    output += rf'               & {l_re} & {latex(c_re, float(e_re))} & &    & {l_re} & {latex(c_re2, float(e_re2))} \\*'
-                l_im = rf'$\Im\left[{wave.latex.replace("$", "")}\right]$'
-                if wave.l != 0:
                     i_im = fit_result.fit_result.model.parameters.index(
                         f'{coefficient_name} imag'
                     )
@@ -124,16 +116,16 @@ class BinnedFitReport(luigi.Task):
                         ],
                         ddof=1,
                     )
-                    c_im2 = bin_status2.x[i_im]
-                    e_im2 = np.std(
+                    c_tot = c_re**2 + c_im**2
+                    e_tot = np.std(
                         [
-                            fit_result.samples[ibin + 1][j][i_im]
-                            for j in range(len(fit_result.samples[ibin + 1]))
+                            fit_result.samples[ibin][j][i_re] ** 2
+                            + fit_result.samples[ibin][j][i_im] ** 2
+                            for j in range(len(fit_result.samples[ibin]))
                         ],
                         ddof=1,
                     )
-                    output += '\n'
-                    output += rf'& {l_im} & {latex(c_im, float(e_im))} & &    & {l_im} & {latex(c_im2, float(e_im2))} \\*'
+                output += rf'\n            {bin_edges if iwave == 0 else ""} & {wave.latex} & {latex(c_re, float(e_re))} & {latex(c_im, float(e_im))} & {latex(c_tot, float(e_tot))} \\*'
                 if last_wave:
                     if last_bin:
                         output += r'\bottomrule'
@@ -148,6 +140,8 @@ class BinnedFitReport(luigi.Task):
 
 
 def latex(val: float, unc: float) -> str:
+    if val == 0.0 and unc == 0.0:
+        return r'$0.0$ (fixed)'
     unc_trunc = round(unc, -int(np.floor(np.log10(abs(unc)))) + 1)
     val_trunc = round(val, -int(np.floor(np.log10(abs(unc)))) + 1)
     ndigits = int(np.floor(np.log10(abs(unc)))) - 1

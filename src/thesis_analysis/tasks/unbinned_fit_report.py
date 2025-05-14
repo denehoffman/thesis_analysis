@@ -128,7 +128,7 @@ class UnbinnedFitReport(luigi.Task):
                 else:
                     wave = latex_wave_name
                     latest_wave = latex_wave_name
-                output += f'\n{wave} & {latex_res_name} & {latex(value_real, unc_real)} & {latex(value_imag, unc_imag)} & {latex(total_mag, total_mag_unc)} \\\\'
+                output += f'\n{wave} & {latex_res_name} & {latex(value_real, float(unc_real))} & {latex(value_imag, float(unc_imag))} & {latex(total_mag, float(total_mag_unc))} \\\\'
 
         output += rf"""\bottomrule
         \end{{tabular}}

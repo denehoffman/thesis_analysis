@@ -362,10 +362,37 @@ class RunAll(luigi.WrapperTask):
             BGGENPlots(run_period='s18'),
             RFPlot(data_type='data_original'),
             RFPlot(data_type='data_original', chisqdof=chisqdof),
-            RFPlot(data_type='data_original', protonz=True),
-            RFPlot(data_type='data_original', chisqdof=chisqdof, protonz=True),
-            FactorizationReport(chisqdof, max_quantiles=4),
-            SPlotReport(chisqdof, nsig_max=1, nbkg_max=4),
+            RFPlot(data_type='data_original', chisqdof=chisqdof),
+            FactorizationReport(
+                chisqdof, ksb_costheta=-1.00, cut_baryons=True, max_quantiles=4
+            ),
+            FactorizationReport(
+                chisqdof, ksb_costheta=0.00, cut_baryons=True, max_quantiles=4
+            ),
+            FactorizationReport(
+                chisqdof, ksb_costheta=0.00, cut_baryons=False, max_quantiles=4
+            ),
+            SPlotReport(
+                chisqdof,
+                ksb_costheta=-1.00,
+                cut_baryons=True,
+                nsig_max=1,
+                nbkg_max=4,
+            ),
+            SPlotReport(
+                chisqdof,
+                ksb_costheta=0.00,
+                cut_baryons=True,
+                nsig_max=1,
+                nbkg_max=4,
+            ),
+            SPlotReport(
+                chisqdof,
+                ksb_costheta=0.00,
+                cut_baryons=False,
+                nsig_max=1,
+                nbkg_max=4,
+            ),
             # CutPlotsCombined(data_type='data'),
             # CutPlotsCombined(data_type='data', chisqdof=3.4, protonz=True),
         ]

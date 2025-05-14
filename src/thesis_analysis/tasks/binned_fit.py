@@ -13,7 +13,7 @@ from thesis_analysis.pwa import (
     SinglePathSet,
     fit_binned,
 )
-from thesis_analysis.tasks.chisqdof import ChiSqDOF
+from thesis_analysis.tasks.baryon_cut import BaryonCut
 from thesis_analysis.tasks.splot_weights import SPlotWeights
 from thesis_analysis.wave import Wave
 
@@ -47,7 +47,7 @@ class BinnedFit(luigi.Task):
             )
             for run_period in RUN_PERIODS
         ] + [
-            ChiSqDOF(
+            BaryonCut(
                 'accmc',
                 run_period,
                 self.chisqdof,
